@@ -1,0 +1,17 @@
+{
+    "project": "深教考通",
+    "phase": "P5-validated",
+    "activeWork": "首版项目构建与本地 mock 验收已完成",
+    "activeWorktree": "main",
+    "blocked": [],
+    "secretsPolicy": {
+        "storeRealSecrets": false,
+        "notes": "真实微信小程序 appid/appkey/appsecret、Supabase URL/anon key/service_role key 均由用户后续手动填写；客户端严禁 service_role。"
+    },
+    "validationStrategy": {
+        "primary": "harness/html-preview 本地 HTML + mock 数据",
+        "secondary": "pnpm dev:h5 与 pnpm build:mp-weixin"
+    },
+    "nextImmediateAction": "用户补齐 Supabase 与微信小程序配置后进行真实后端联调；或继续深化冷启动生产表单与完整业务交互。",
+    "updatedAt": "2026-06-22T20:35:00+08:00"
+}

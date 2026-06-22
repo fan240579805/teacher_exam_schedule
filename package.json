@@ -1,0 +1,21 @@
+{
+    "name": "teacher-exam-monorepo",
+    "version": "0.1.0",
+    "private": true,
+    "description": "深教考通 uni-app + Supabase monorepo",
+    "packageManager": "pnpm@8.15.9",
+    "scripts": {
+        "dev:h5": "pnpm --filter @teacher-exam/app dev:h5",
+        "dev:mp-weixin": "pnpm --filter @teacher-exam/app dev:mp-weixin",
+        "build:h5": "pnpm --filter @teacher-exam/app build:h5",
+        "build:mp-weixin": "pnpm --filter @teacher-exam/app build:mp-weixin",
+        "type-check": "pnpm -r type-check",
+        "test": "pnpm --filter @teacher-exam/core test",
+        "harness:html": "python3 -m http.server 4174 --directory harness/html-preview",
+        "harness:ebbinghaus": "pnpm --filter @teacher-exam/core harness:ebbinghaus"
+    },
+    "devDependencies": {
+        "typescript": "^4.9.4",
+        "vitest": "^1.6.1"
+    }
+}

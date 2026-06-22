@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>深教考通 · 本地验收</title>
+    <style>
+        :root {
+            color: #1f2933;
+            background: #f7f4ea;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+        }
+
+        main {
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 18px;
+        }
+
+        .card {
+            margin-bottom: 18px;
+            padding: 22px;
+            border-radius: 24px;
+            background: #fff;
+            box-shadow: 0 12px 40px rgba(31, 41, 51, 0.06);
+        }
+
+        .eyebrow {
+            color: #0f766e;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2 {
+            margin: 8px 0 12px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 999px;
+            padding: 10px 16px;
+            color: #fff;
+            background: #0f766e;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        .task,
+        .node,
+        .check {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-top: 1px solid #eef2f7;
+        }
+
+        .pill {
+            border-radius: 999px;
+            padding: 4px 9px;
+            background: #ecfdf5;
+            color: #0f766e;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .alert {
+            background: #fff7ed;
+            color: #9a3412;
+        }
+
+        .heat {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .cell {
+            position: relative;
+            min-height: 44px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            background: #edf2f7;
+        }
+
+        .hot1 { background: #bbf7d0; }
+        .hot2 { background: #4ade80; }
+        .hot3 { background: #15803d; color: #fff; }
+
+        .film {
+            position: absolute;
+            right: 4px;
+            top: 2px;
+            font-size: 12px;
+        }
+
+        .progress {
+            height: 12px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            width: 0;
+            background: #0f766e;
+        }
+
+        @media (max-width: 860px) {
+            body {
+                padding: 14px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="card">
+        <span class="eyebrow">Local HTML Harness</span>
+        <h1>深教考通 · 核心流程验收</h1>
+        <p class="muted">本页不读取任何密钥，不连接 Supabase。用于先验收 PRD 中的任务调度、结算、串行解锁、热力月历与预警。</p>
+        <button onclick="resetState()">重置 mock 数据</button>
+    </section>
+
+    <section class="grid">
+        <div>
+            <section id="alert" class="card alert"></section>
+            <section class="card">
+                <span class="eyebrow">Execution UI</span>
+                <h2>今日任务</h2>
+                <div id="tasks"></div>
+            </section>
+            <section class="card">
+                <span class="eyebrow">7-Layer Tree</span>
+                <h2>知识树穿透页</h2>
+                <div id="tree"></div>
+            </section>
+        </div>
+        <div>
+            <section class="card">
+                <span class="eyebrow">Dashboard</span>
+                <h2>热力月历</h2>
+                <div id="heat" class="heat"></div>
+            </section>
+            <section class="card">
+                <span class="eyebrow">Burndown</span>
+                <h2>模块燃尽</h2>
+                <p id="burnText" class="muted"></p>
+                <div class="progress"><div id="burnBar" class="bar"></div></div>
+            </section>
+            <section class="card">
+                <span class="eyebrow">Interview V1</span>
+                <h2>结构化飞行检查单</h2>
+                <div id="checklist"></div>
+            </section>
+        </div>
+    </section>
+</main>
+
+<script>
+    const initialNodes = [
+        { id: 'target', parentId: null, level: 1, title: '深圳教师招聘', isLeaf: false, status: 'available', orderIndex: 1, estimatedMinutes: 0, frequencyWeight: 1 },
+        { id: 'module', parentId: 'target', level: 2, title: '教育综合知识', isLeaf: false, status: 'available', orderIndex: 1, estimatedMinutes: 0, frequencyWeight: 1 },
+        { id: 'book', parentId: 'module', level: 3, title: '教育学教材', isLeaf: false, status: 'available', orderIndex: 1, estimatedMinutes: 0, frequencyWeight: 1 },
+        { id: 'chapter1', parentId: 'book', level: 4, title: '第一编 教育与教育学', isLeaf: false, status: 'available', orderIndex: 1, estimatedMinutes: 0, frequencyWeight: 1 },
+        { id: 'section1', parentId: 'chapter1', level: 6, title: '第一节 教育的概念', isLeaf: false, status: 'available', orderIndex: 1, estimatedMinutes: 0, frequencyWeight: 1 },
+        { id: 'leaf1', parentId: 'section1', level: 7, title: '教育的本质属性', isLeaf: true, status: 'available', orderIndex: 1, estimatedMinutes: 35, frequencyWeight: 1 },
+        { id: 'leaf2', parentId: 'section1', level: 7, title: '教育的社会属性', isLeaf: true, status: 'locked', orderIndex: 2, estimatedMinutes: 30, frequencyWeight: 0.8, trapMemo: '注意区分永恒性与历史性' },
+        { id: 'chapter2', parentId: 'book', level: 4, title: '第二编 教育与社会发展', isLeaf: false, status: 'locked', orderIndex: 2, estimatedMinutes: 0, frequencyWeight: 1 },
+        { id: 'leaf3', parentId: 'chapter2', level: 7, title: '个体发展功能', isLeaf: true, status: 'locked', orderIndex: 1, estimatedMinutes: 30, frequencyWeight: 0.9 }
+    ];
+
+    const initialHeat = [
+        { date: '06-18', minutes: 120, hasArtifact: false },
+        { date: '06-19', minutes: 180, hasArtifact: true },
+        { date: '06-20', minutes: 60, hasArtifact: false },
+        { date: '06-21', minutes: 210, hasArtifact: true },
+        { date: '06-22', minutes: 0, hasArtifact: false }
+    ];
+
+    let nodes = structuredClone(initialNodes);
+    let heat = structuredClone(initialHeat);
+
+    function tasks() {
+        const review = nodes.find((node) => node.id === 'leaf2' && node.status !== 'archived');
+        const dueReview = review && review.status !== 'locked' ? [{ ...review, priority: 'P0', reason: '复测' }] : [];
+        const available = nodes
+            .filter((node) => node.isLeaf && node.status === 'available')
+            .map((node) => ({ ...node, priority: 'P1', reason: '新学' }));
+        return [...dueReview, ...available];
+    }
+
+    function settle(id) {
+        nodes = nodes.map((node) => node.id === id ? { ...node, status: 'done' } : node);
+        nodes = nodes.map((candidate) => {
+            if (candidate.status !== 'locked') return candidate;
+            const previous = nodes.filter((node) => node.parentId === candidate.parentId && node.orderIndex < candidate.orderIndex);
+            return previous.length > 0 && previous.every((node) => node.status === 'done')
+                ? { ...candidate, status: 'available' }
+                : candidate;
+        });
+        const today = heat[heat.length - 1];
+        today.minutes += 35;
+        render();
+    }
+
+    function quota() {
+        const remaining = nodes.filter((node) => node.isLeaf && node.status !== 'done').length;
+        const estimated = remaining * 30;
+        return {
+            estimated,
+            level: estimated > 180 ? 'RED' : estimated > 150 ? 'AMBER' : 'OK'
+        };
+    }
+
+    function render() {
+        const alert = quota();
+        document.querySelector('#alert').innerHTML = `<span class="eyebrow">Amber Alert</span><h2>${alert.level}</h2><p>剩余叶子节点预计 ${alert.estimated} 分钟。超过阈值时可强行提额或回收低频考点。</p>`;
+
+        document.querySelector('#tasks').innerHTML = tasks().map((task) => `
+            <div class="task">
+                <div>
+                    <span class="pill">${task.priority} · ${task.reason}</span>
+                    <strong style="display:block;margin-top:8px">${task.title}</strong>
+                    ${task.trapMemo ? `<span class="muted">避坑：${task.trapMemo}</span>` : ''}
+                </div>
+                <button onclick="settle('${task.id}')">结算</button>
+            </div>
+        `).join('') || '<p class="muted">今日已全部闭环，可以上传战果照片。</p>';
+
+        document.querySelector('#tree').innerHTML = nodes.map((node) => `
+            <div class="node" style="padding-left:${(node.level - 1) * 12}px">
+                <span>L${node.level} ${node.title}</span>
+                <span class="pill">${node.status}</span>
+            </div>
+        `).join('');
+
+        document.querySelector('#heat').innerHTML = heat.map((day) => {
+            const hot = day.minutes >= 180 ? 'hot3' : day.minutes >= 90 ? 'hot2' : day.minutes > 0 ? 'hot1' : '';
+            return `<div class="cell ${hot}"><span>${day.date}</span>${day.hasArtifact ? '<span class="film">▣</span>' : ''}</div>`;
+        }).join('');
+
+        const total = nodes.filter((node) => node.isLeaf).length;
+        const done = nodes.filter((node) => node.isLeaf && node.status === 'done').length;
+        const percent = total === 0 ? 0 : Math.round(done / total * 100);
+        document.querySelector('#burnText').textContent = `教育综合知识：${done}/${total} 叶子节点闭环`;
+        document.querySelector('#burnBar').style.width = `${percent}%`;
+
+        document.querySelector('#checklist').innerHTML = ['耗时控制达标', '无明显卡壳', '板书完整', '环节过渡自然']
+            .map((item) => `<div class="check"><span>${item}</span><span class="pill">绿色</span></div>`)
+            .join('');
+    }
+
+    function resetState() {
+        nodes = structuredClone(initialNodes);
+        heat = structuredClone(initialHeat);
+        render();
+    }
+
+    render();
+</script>
+</body>
+</html>

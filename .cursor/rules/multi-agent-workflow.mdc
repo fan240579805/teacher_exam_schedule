@@ -1,0 +1,17 @@
+---
+description: Multi-agent workflow, isolated worktrees, review, commit and push protocol
+alwaysApply: true
+---
+
+# Multi-Agent Workflow
+
+- For sizable work, prefer multi-agent execution with isolated git worktrees or clearly separated directories.
+- Split responsibilities where useful: one agent may focus on UI/style/interaction polish, another on business logic, data modeling, Supabase, and core algorithms.
+- Keep progress and handoff state updated in `.agent/TODO.md`, `.agent/STATE.json`, and `.agent/CHANGELOG.md`.
+- When problems occur, record the issue, investigation result, fix, and verification outcome in `.agent/CHANGELOG.md` or `.agent/STATE.json` before moving on.
+- After fixing a problem, self-drive verification with the narrowest relevant test first, then broader checks when the change can affect shared behavior.
+- Before any commit or push, run a code audit/review pass over all changes. Use the project code-reviewer skill or an equivalent review stance focused on correctness, security, performance, and missing tests.
+- Do not commit or push until the review pass is clean or the remaining risks are explicitly documented.
+- Commit messages should make progress or resolved problems clear. Prefer small commits that map to a meaningful phase, issue, or verified fix.
+- When the user requests commit and push, commit reviewed changes and push to the tracked remote branch unless blocked by missing remote/authentication.
+- Never include real secrets in commits: no mini-program appkey/appsecret, Supabase service role key, or other private credentials.

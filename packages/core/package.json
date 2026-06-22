@@ -1,0 +1,21 @@
+{
+    "name": "@teacher-exam/core",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "scripts": {
+        "type-check": "tsc --noEmit",
+        "test": "vitest run",
+        "harness:ebbinghaus": "tsx scripts/ebbinghaus-sim.ts"
+    },
+    "dependencies": {
+        "@teacher-exam/types": "workspace:*"
+    },
+    "devDependencies": {
+        "tsx": "^4.20.3",
+        "typescript": "^4.9.4",
+        "vitest": "^1.6.1"
+    }
+}
