@@ -7,6 +7,7 @@ alwaysApply: true
 
 - For sizable work, prefer multi-agent execution with isolated git worktrees or clearly separated directories.
 - Split responsibilities where useful: one agent may focus on UI/style/interaction polish, another on business logic, data modeling, Supabase, and core algorithms.
+- Before any UI, visual design, interaction, layout, navigation, animation, chart, or UX quality work, invoke the `ui-ux-pro-max` skill and apply its accessibility, touch target, responsive, typography, color, and feedback guidance.
 - Keep progress and handoff state updated in `.agent/TODO.md`, `.agent/STATE.json`, and `.agent/CHANGELOG.md`.
 - When problems occur, record the issue, investigation result, fix, and verification outcome in `.agent/CHANGELOG.md` or `.agent/STATE.json` before moving on.
 - After fixing a problem, self-drive verification with the narrowest relevant test first, then broader checks when the change can affect shared behavior.

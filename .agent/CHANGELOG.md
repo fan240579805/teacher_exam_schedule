@@ -46,3 +46,7 @@
 
 - 修复 `pickLowFrequencyLeaves` 对 `estimatedMinutes` 空值使用非空断言导致排序不稳定的问题。
 - 补充 `KnowledgeNode.completedAt` 类型，使应用结算状态与数据库 `completed_at` 语义对齐。
+
+### UI/UX Skill 规则
+
+- 根据用户要求，后续任何 UI、视觉设计、交互、布局、导航、动画、图表或体验优化任务，必须先调用 `ui-ux-pro-max` skill，并遵循其可访问性、触控目标、响应式、排版、颜色与反馈规范。
