@@ -13,6 +13,12 @@
             }
         },
         {
+            "path": "pages/mindmap/index",
+            "style": {
+                "navigationBarTitleText": "思维导图"
+            }
+        },
+        {
             "path": "pages/dashboard/index",
             "style": {
                 "navigationBarTitleText": "仪表盘"

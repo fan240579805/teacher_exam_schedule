@@ -34,6 +34,27 @@
 - 仪表盘浏览器验收通过：最近打卡随笔出现本次验收文本，热力月历展示图片标记，燃尽进度展示 `3/3`。
 - 知识树浏览器验收通过：L7 叶子可移入回收站并变为 `archived`，模板库按钮可重新载入官方 mock 模板。
 
+### P7 知识树重构为书架 + 可编辑思维导图
+
+- 按需求把「知识树」Tab 从七层 nodes 列表重构为「复习书架 + 思维导图」：书架展示用户自定义复习书目（如《教育心理学》《特殊教育学》），点击进入该书可编辑思维导图。
+- 重设计数据结构：新增 `Book`（书名/作者/封面色/排序）与 `BookNode`（parent_id 邻接表、主标题 title、副标题 subtitle、排序）共享类型；新增迁移 `supabase/migrations/0002_books.sql`（含索引、updated_at 触发器、按 owner 的 RLS）。
+- 新增核心纯函数 `buildBookTree`、`collectSubtreeIds`、`nextOrderIndex` 并补 1 组（2 个）单测（核心单测由 8 增至 10 条）。
+- 新增 `useLibraryStore` 与 `data/library.ts` mock：书目与节点本地持久化、增删改、连续天数排序、删除整本书级联清空节点。
+- 书架页 `pages/tree/index.vue`：封面网格、长按编辑、新增/删除书目、封面色选择，风格与全站统一（米色背景、白卡片、执行绿主色）。
+- 思维导图页 `pages/mindmap/index.vue`：左右向布局、view 连接线、节点主副标题、点击展开/收起、长按编辑、新增子/同级节点、删除子树、`+ 主分支`，编辑用底部面板（小程序不支持 contenteditable）。
+- 关键兼容性决策：uni-app vue3 递归组件在微信小程序产物中 `usingComponents` 为空、子层级不渲染；故思维导图改用「JS 计算布局 + 绝对定位节点 + 计算坐标连接线」非递归方案，H5 与小程序均为迭代 `wx:for` 渲染，双端一致且流畅。
+- 修复 tabBar 页底部弹窗被原生 tabBar 遮挡：将书架与思维导图弹窗 `z-index` 提升到 999 并增加底部留白。
+- 浏览器（H5）逐功能验收通过：书架渲染/新增书目/封面色/持久化；思维导图渲染/连接线/折叠展开/编辑保存/新增子节点/删除确认/新增主分支；首页与仪表盘无回归。
+- 验证通过：`pnpm type-check`、`pnpm test`（10 条）、`pnpm build:h5`、`pnpm build:mp-weixin`、IDE lints。
+- 说明：本次 books/book_nodes 暂为本地（uni storage）持久化，真实 Supabase 读写待用户补齐配置后接入；迁移与 RLS 已先行就绪。
+
+### 运维备忘：新增 workspace 导出后需重启 dev
+
+- 现象：`pages/tree/index` 报 `SyntaxError: ... does not provide an export named 'buildBookTree'`。
+- 原因：`dev:h5` 在 `@teacher-exam/core` 新增导出之前已启动，Vite 把旧版本 `@teacher-exam/core` 预打包进 `apps/app/node_modules/.vite` 缓存，运行时找不到新导出（源码、`type-check`、两端 `build` 均正常）。
+- 处理：停掉占用 5173 的旧 dev → 删除 `apps/app/node_modules/.vite` 缓存 → 重新 `npm run dev:h5` 强制重新预打包；浏览器复验书架与思维导图均正常。
+- 规则（务必记住）：凡新增/改动了向 workspace 包（如 `@teacher-exam/core`、`@teacher-exam/types`）导出的内容后，必须重启 `dev:h5`（或删除 `apps/app/node_modules/.vite` 缓存），否则 Vite 预打包缓存仍是旧版本。
+
 ## 2026-06-22
 
 ### 初始化决策

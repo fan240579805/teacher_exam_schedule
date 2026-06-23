@@ -120,3 +120,40 @@ export interface HeatmapDay {
     hasCheckin: boolean;
     imageUrl?: string | null;
 }
+
+export interface Book {
+    id: UUID;
+    workspaceId: UUID;
+    title: string;
+    author?: string | null;
+    coverColor: string;
+    orderIndex: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BookNode {
+    id: UUID;
+    bookId: UUID;
+    parentId: UUID | null;
+    title: string;
+    subtitle?: string | null;
+    orderIndex: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BookTreeNode extends BookNode {
+    children: BookTreeNode[];
+}
+
+export interface CreateBookInput {
+    title: string;
+    author?: string | null;
+    coverColor?: string;
+}
+
+export interface UpsertBookNodeInput {
+    title: string;
+    subtitle?: string | null;
+}

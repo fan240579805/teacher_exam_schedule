@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type { KnowledgeNode, ReviewState } from '@teacher-exam/types';
+import type { BookNode, KnowledgeNode, ReviewState } from '@teacher-exam/types';
 import {
+    buildBookTree,
     buildTree,
     calculateQuota,
     canAddLeaf,
     canUnlockCandidate,
+    collectSubtreeIds,
     generateTodayTasks,
     getHomepageNodes,
     isReviewDue,
+    nextOrderIndex,
     nextReviewDate,
     settleObjective,
     settleRecite
@@ -125,5 +128,48 @@ describe('settlement', () => {
     it('normalizes objective and recite scores', () => {
         expect(settleObjective({ totalCount: 10, wrongCount: 2 }).score).toBe(0.8);
         expect(settleRecite({ mastery: 80 }).mastery).toBe(0.8);
+    });
+});
+
+function bookNode(partial: Partial<BookNode>): BookNode {
+    return {
+        id: partial.id ?? crypto.randomUUID(),
+        bookId: partial.bookId ?? 'book-1',
+        parentId: partial.parentId ?? null,
+        title: partial.title ?? '节点',
+        subtitle: partial.subtitle ?? null,
+        orderIndex: partial.orderIndex ?? 1,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        ...partial
+    };
+}
+
+describe('book mind map', () => {
+    it('builds nested tree ordered by orderIndex', () => {
+        const nodes = [
+            bookNode({ id: 'root', parentId: null, orderIndex: 1, title: '教育心理学' }),
+            bookNode({ id: 'b', parentId: 'root', orderIndex: 2, title: '学习理论' }),
+            bookNode({ id: 'a', parentId: 'root', orderIndex: 1, title: '绪论' }),
+            bookNode({ id: 'a1', parentId: 'a', orderIndex: 1, title: '研究对象' })
+        ];
+
+        const tree = buildBookTree(nodes);
+
+        expect(tree).toHaveLength(1);
+        expect(tree[0].children.map((child) => child.id)).toEqual(['a', 'b']);
+        expect(tree[0].children[0].children[0].id).toBe('a1');
+    });
+
+    it('collects subtree ids and computes next order index', () => {
+        const nodes = [
+            bookNode({ id: 'root', parentId: null, orderIndex: 1 }),
+            bookNode({ id: 'a', parentId: 'root', orderIndex: 1 }),
+            bookNode({ id: 'a1', parentId: 'a', orderIndex: 1 }),
+            bookNode({ id: 'b', parentId: 'root', orderIndex: 2 })
+        ];
+
+        expect(collectSubtreeIds(nodes, 'a').sort()).toEqual(['a', 'a1']);
+        expect(nextOrderIndex(nodes, 'root')).toBe(3);
     });
 });

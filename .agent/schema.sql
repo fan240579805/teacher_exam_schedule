@@ -40,7 +40,14 @@
 -- interview_sessions / interview_checklist_items:
 --   试讲自评目录与锁死检查单；complete_interview_session() 要求全绿才能闭环。
 
--- 6. RLS
+-- 6. 复习书架与可编辑思维导图（迁移 supabase/migrations/0002_books.sql）
+-- books: 用户在「知识树」Tab 维护的复习书目（如《教育心理学》）。
+--   title 书名，author 作者（选填），cover_color 封面色，order_index 书架排序。
+-- book_nodes: 每本书对应的思维导图节点，使用 parent_id 邻接表无限嵌套。
+--   parent_id 为空者即根节点（一本书一个根）；title 主标题，subtitle 副标题（选填），order_index 同级排序。
+--   说明：知识树页已从旧的七层 nodes 展示重构为「书架 + 思维导图」；nodes/template_nodes 仍服务于首页调度引擎。
+
+-- 7. RLS
 -- catalog_options / official templates 对登录用户公开读取。
--- workspaces/nodes/study_logs/node_reviews/daily_checkins/interview_* 全部按 user_id 或 workspace owner 限制。
+-- workspaces/nodes/study_logs/node_reviews/daily_checkins/interview_*/books/book_nodes 全部按 user_id 或 owner 限制。
 -- 客户端仅允许使用 anon key，严禁 service_role 进入应用代码。

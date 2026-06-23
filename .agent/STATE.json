@@ -1,13 +1,16 @@
 {
     "project": "深教考通",
-    "phase": "P6-final-prd-browser-validated",
-    "activeWork": "终版 PRD 对齐已完成并通过 harness 与浏览器验收：daily_checkins、终极打卡按钮、DailyCheckinModal、热力月历图片标记、L7 修剪和模板入口已落地。",
+    "phase": "P7-library-mindmap-browser-validated",
+    "activeWork": "知识树 Tab 已重构为「复习书架 + 可编辑思维导图」：新增 books/book_nodes 数据模型、library store、书架页与思维导图页，思维导图用非递归绝对布局保证小程序与 H5 双端一致，已通过浏览器逐功能走查。",
     "activeWorktree": "main",
     "blocked": [],
     "authoringPolicy": {
         "language": "所有计划、进度、日志、状态、文档、交接说明和提交信息必须使用中文。",
         "technicalTerms": "文件名、表名、函数名、命令名、包名可以保留英文原文，但解释文字必须使用中文。"
     },
+    "devNotes": [
+        "新增/改动 workspace 包（@teacher-exam/core、@teacher-exam/types）的导出后，必须重启 dev:h5 或删除 apps/app/node_modules/.vite 缓存，否则 Vite 预打包缓存仍是旧版本，运行时会报 does not provide an export named ...。"
+    ],
     "secretsPolicy": {
         "storeRealSecrets": false,
         "notes": "真实微信小程序 appid/appkey/appsecret、Supabase URL/anon key/service_role key 均由用户后续手动填写；客户端严禁 service_role。"
@@ -16,6 +19,6 @@
         "primary": "harness/html-preview 本地 HTML + mock 数据",
         "secondary": "pnpm dev:h5 与 pnpm build:mp-weixin"
     },
-    "nextImmediateAction": "已准备提交。提交后如继续推进，优先做真实 Supabase Auth 联调、Storage 公开访问策略核验、微信开发者工具真机预览，以及打卡历史详情页。",
-    "updatedAt": "2026-06-23T14:01:00+08:00"
+    "nextImmediateAction": "书架与思维导图已完成本地验收并提交推送。后续可做：思维导图节点拖拽排序、books/book_nodes 接入真实 Supabase 读写、微信开发者工具真机走查长按手感。",
+    "updatedAt": "2026-06-23T16:10:00+08:00"
 }

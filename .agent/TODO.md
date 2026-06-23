@@ -64,3 +64,20 @@
 - [x] 仪表盘热力月历改为读取 `daily_checkins`，上传图片的日期叠加图片标记。
 - [x] 规划页补齐 L7 叶子节点左滑修剪、回收站语义与模板库克隆入口。
 - [x] 完成 P6 窄范围验证：`pnpm type-check`、`pnpm test`、`pnpm build:h5`、`pnpm build:mp-weixin`、IDE lints、浏览器 H5 功能验收均通过。
+
+## P7 知识树重构为书架 + 可编辑思维导图
+
+知识树 Tab 从七层 nodes 列表重构为「复习书架 + 思维导图」。新增 `books`、`book_nodes` 数据模型（迁移 `supabase/migrations/0002_books.sql`）。
+
+- [x] 新增 `Book`/`BookNode`/`BookTreeNode` 等共享类型与 `CreateBookInput`、`UpsertBookNodeInput`。
+- [x] 新增核心纯函数 `buildBookTree`、`collectSubtreeIds`、`nextOrderIndex` 并补单测。
+- [x] 新增 `useLibraryStore`、`data/library.ts` mock，支持书目与节点本地持久化、增删改、连续排序。
+- [x] 重构 `pages/tree/index.vue` 为书架：书目封面网格、新增/编辑/删除、封面色选择。
+- [x] 新增 `pages/mindmap/index.vue` 可编辑思维导图：左右向布局、连接线、主副标题、点击展开/收起、长按编辑、新增子/同级节点、删除子树、新增主分支。
+- [x] 思维导图采用「绝对定位 + 计算布局 + view 连接线」非递归实现，规避 uni-app vue3 递归组件在微信小程序 `usingComponents` 为空导致子层不渲染的问题，保证 H5 与小程序双端一致。
+- [x] 编辑统一使用底部面板（小程序不支持 contenteditable），交互流畅。
+- [x] 注册 `pages/mindmap/index` 路由（非 tabBar）。
+- [x] 修复 tabBar 页底部弹窗被原生 tabBar 遮挡：提升弹窗层级并增加底部留白。
+- [x] 同步 `supabase/migrations/0002_books.sql` 与 `.agent/schema.sql` 摘要。
+- [x] 严格验收：类型检查、单测（10 条）、H5/小程序构建、IDE lints、浏览器逐功能走查均通过。
+- [x] 修复 dev:h5 报「does not provide an export named 'buildBookTree'」：清理 `apps/app/node_modules/.vite` 缓存并重启；记录「新增 workspace 导出后需重启 dev」规则到 STATE/CHANGELOG。
