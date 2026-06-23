@@ -50,12 +50,16 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        // 请在本地填入微信小程序 AppID，勿提交真实 appkey/appsecret。
-        "appid" : "",
+        // 微信小程序 AppID（仅 AppID 可提交；勿提交 appsecret）。
+        "appid" : "wxf68746786a764562",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "es6" : true,
+            "minified" : true,
+            "postcss" : true
         },
-        "usingComponents" : true
+        "usingComponents" : true,
+        "lazyCodeLoading" : "requiredComponents"
     },
     "mp-alipay" : {
         "usingComponents" : true

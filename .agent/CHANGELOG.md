@@ -1,5 +1,16 @@
 # Agent Changelog
 
+## 2026-06-24
+
+### 微信小程序真机调试 `__wxAppCode__` 报错修复
+
+- 现象：微信开发者工具真机调试报 `SystemError (jsEnginScriptError) Can't find variable: __wxAppCode__`，紧接着 `Page route 错误(system error) routeDone with a webviewId 46 is not found`。错误栈始于 `WASubContext.js` 的 `recurseUsingComponents → injectComponentsRecursively`。
+- 根因：`apps/app/src/manifest.json` 中微信小程序 AppID 填错位置——把 `wxf68746786a764562` 写到了顶层 `appid`（该字段是 5+App 的 `__UNI__` 标识），而 `mp-weixin.appid` 留空。uni-app 编译产物的 `project.config.json` 因此没有有效 AppID，微信运行时不会注入 `__wxAppCode__`（该全局变量承载小程序所有页面/组件注入代码），导致 `recurseUsingComponents` 阶段 `ReferenceError`，首屏起不来又触发 `routeDone webviewId not found` 链式报错。
+- 修复：将顶层 `appid` 置空（保留字段以兼容 5+App），把 `wxf68746786a764562` 移到 `mp-weixin.appid`；顺手补齐 `mp-weixin.setting` 的 `es6/minified/postcss` 与 `lazyCodeLoading: requiredComponents`，让小程序产物默认走 ES6→ES5、CSS 兼容性处理与按需注入，规避后续真机兼容性踩坑。
+- AppID 不属于密钥范畴，可入库；`appsecret` 仍严禁提交，保持 `secretsPolicy.storeRealSecrets=false`。
+- 用户后续步骤（不在本次代码改动范围内）：重新执行 `pnpm --filter @teacher-exam/app run dev:mp-weixin`，在微信开发者工具中导入**构建产物目录** `apps/app/dist/dev/mp-weixin`（非源码目录），项目设置里确认 AppID 为 `wxf68746786a764562`，清缓存→普通编译。
+- 本次仅改 `manifest.json` 配置，不动业务代码、不跑构建。
+
 ## 2026-06-23
 
 ### 终版 PRD 同步修正

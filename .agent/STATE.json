@@ -1,7 +1,7 @@
 {
     "project": "深教考通",
-    "phase": "P7-library-mindmap-browser-validated",
-    "activeWork": "知识树 Tab 已重构为「复习书架 + 可编辑思维导图」并通过浏览器逐功能走查；首页重置按钮/底部打卡条偏移和仪表盘最近随笔右对齐问题已修复并完成 H5 截图复验。",
+    "phase": "P8-mp-weixin-appid-fix",
+    "activeWork": "修复微信小程序真机调试 `Can't find variable: __wxAppCode__` 报错：manifest.json 中微信小程序 AppID 错填到顶层 5+App appid 位置，已迁移到 mp-weixin.appid（wxf68746786a764562），并补齐 mp-weixin.setting 的 es6/minified/postcss 与 lazyCodeLoading=requiredComponents。",
     "activeWorktree": "main",
     "blocked": [],
     "authoringPolicy": {
@@ -9,16 +9,18 @@
         "technicalTerms": "文件名、表名、函数名、命令名、包名可以保留英文原文，但解释文字必须使用中文。"
     },
     "devNotes": [
-        "新增/改动 workspace 包（@teacher-exam/core、@teacher-exam/types）的导出后，必须重启 dev:h5 或删除 apps/app/node_modules/.vite 缓存，否则 Vite 预打包缓存仍是旧版本，运行时会报 does not provide an export named ...。"
+        "新增/改动 workspace 包（@teacher-exam/core、@teacher-exam/types）的导出后，必须重启 dev:h5 或删除 apps/app/node_modules/.vite 缓存，否则 Vite 预打包缓存仍是旧版本，运行时会报 does not provide an export named ...。",
+        "uni-app 微信小程序 AppID 必须填在 manifest.json 的 mp-weixin.appid，不能填在顶层 appid（顶层 appid 是 5+App 的 __UNI__ 标识）；填错会导致编译产物 project.config.json 无 AppID，真机运行时不注入 __wxAppCode__，抛 ReferenceError。",
+        "微信开发者工具导入 uni-app 项目时，必须导入构建产物目录 apps/app/dist/dev/mp-weixin（或 dist/build/mp-weixin），不能导入源码目录 apps/app。"
     ],
     "secretsPolicy": {
         "storeRealSecrets": false,
-        "notes": "真实微信小程序 appid/appkey/appsecret、Supabase URL/anon key/service_role key 均由用户后续手动填写；客户端严禁 service_role。"
+        "notes": "微信小程序 AppID 不属于密钥可入库；appsecret、Supabase service_role key 严禁提交，客户端严禁 service_role。"
     },
     "validationStrategy": {
         "primary": "harness/html-preview 本地 HTML + mock 数据",
         "secondary": "pnpm dev:h5 与 pnpm build:mp-weixin"
     },
-    "nextImmediateAction": "样式修复已完成，等待用户确认是否提交；后续可做：思维导图节点拖拽排序、books/book_nodes 接入真实 Supabase 读写、微信开发者工具真机走查长按手感。",
-    "updatedAt": "2026-06-23T17:09:00+08:00"
+    "nextImmediateAction": "用户重新执行 `pnpm --filter @teacher-exam/app run dev:mp-weixin`，在微信开发者工具中重新导入 `apps/app/dist/dev/mp-weixin` 产物目录，确认 AppID 为 wxf68746786a764562 后清缓存→普通编译验证 __wxAppCode__ 报错消失；后续可做：思维导图节点拖拽排序、books/book_nodes 接入真实 Supabase 读写。",
+    "updatedAt": "2026-06-24T00:46:00+08:00"
 }

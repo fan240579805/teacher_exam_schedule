@@ -81,3 +81,12 @@
 - [x] 同步 `supabase/migrations/0002_books.sql` 与 `.agent/schema.sql` 摘要。
 - [x] 严格验收：类型检查、单测（10 条）、H5/小程序构建、IDE lints、浏览器逐功能走查均通过。
 - [x] 修复 dev:h5 报「does not provide an export named 'buildBookTree'」：清理 `apps/app/node_modules/.vite` 缓存并重启；记录「新增 workspace 导出后需重启 dev」规则到 STATE/CHANGELOG。
+
+## P8 微信小程序真机调试修复
+
+针对微信开发者工具真机调试出现的 `Can't find variable: __wxAppCode__` 与 `routeDone webviewId not found` 报错。
+
+- [x] 定位根因：`manifest.json` 顶层 `appid` 错填了微信小程序 AppID（该位置是 5+App 标识），`mp-weixin.appid` 留空导致小程序产物无有效 AppID、运行时不注入 `__wxAppCode__`。
+- [x] 修复 `apps/app/src/manifest.json`：顶层 `appid` 置空，`mp-weixin.appid` 填 `wxf68746786a764562`。
+- [x] 补齐 `mp-weixin.setting`：`es6=true`、`minified=true`、`postcss=true`，并新增 `lazyCodeLoading: requiredComponents`。
+- [ ] 用户侧验证（待用户执行）：重新 `pnpm --filter @teacher-exam/app run dev:mp-weixin`，微信开发者工具导入产物目录 `apps/app/dist/dev/mp-weixin`，确认 AppID 显示为 `wxf68746786a764562`，清缓存→普通编译并真机调试通过。
