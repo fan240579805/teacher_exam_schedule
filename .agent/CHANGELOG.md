@@ -2,6 +2,44 @@
 
 ## 2026-06-24
 
+### P9 文案去 AI 化、按钮 UI 一致性修复、模块燃尽按 L2 重构
+
+- 文案去 AI 化（mock 数据 + 全 UI 文案）：
+  - `apps/app/src/data/mock.ts` 中 `mockWorkspace.title` 改为「深圳小学语文 · 暑期冲刺」，`mockDailyCheckins` 三条 memo 改写为真实考编生口吻，去掉句号和「错因集中在概念外延」类汇报体。
+  - 首页：`航向修正预警` → `进度提醒`、`Quota` → `负荷指数`、`动作结算台` → `完成本节`、`闭环此节点` → `标记完成`、`已闭环` toast → `已完成`、`避坑` → `小提醒`、`已完成今日所有任务，去打卡` → `今日任务已完成 · 去写随笔`。
+  - 仪表盘：`Dashboard & Asset Vault / 进度、热力与偏科风险` → `我的进度 / 备考节奏一目了然`，`分模块燃尽` → `模块燃尽进度`，`热力月历读取每日终极打卡日志` → `月度打卡热力`，`战果照片` → `学习记录照片`，`面试规范 V1` → `面试自评清单`，并补口语化提示文案。
+  - 打卡弹窗：`已连续坚持高保真执行 X 天` → `今天是你连续打卡的第 X 天`，`添加图片（限 1 张）` → `添加一张今天的笔记或实拍`，`支持拍摄或上传今日战果照片` → `可以是草稿、笔记本、录音截图任你`。
+  - `manifest.json` description 中「高保真执行记录」改为「复习记录」，规避 AI 黑话外泄。
+
+- 按钮 UI 一致性修复：
+  - 首页「重置」按钮从「绿底实心」改为「透明底 + 主题色 #0f766e 描边 + 主题色字」，符合次级按钮规范。
+  - 首页打卡按钮未就绪态从 `#d1d5db + #4b5563` 改为 `#e5e7eb + #9ca3af`（更弱视觉），就绪态保留 `#0f766e + #fff`。
+  - `DailyCheckinModal` 关闭按钮：清掉 `border`、字色统一为 `#6b7280`、显式 `font-size: 36rpx`、加 `::after { border: none }`。
+  - `DailyCheckinModal` 连续天数文案从战损红 `#b91c1c` 改为主题色 `#0f766e`，与全站冷静绿色调统一。
+  - 在 `App.vue` 全局补 `button::after { border: none }` 与 `button { background: transparent; line-height: normal; }`，杜绝 uni-app H5 / 微信小程序原生 button 的 1rpx 幽灵灰边。
+
+- 数据结构改造（按 PRD §四 Tab3 燃尽语义对齐）：
+  - `mock.ts` 扩为 3 个 L2 大模块 × 14 个 L7 叶子：
+    - 教育综合知识（《教育学》《教育心理学》共 6 个 leaf）
+    - 小学语文学科知识（《现代汉语》《义务教育语文课程标准 2022 版》共 5 个 leaf）
+    - 教师职业能力（教育法律法规、十项准则共 3 个 leaf）
+  - `stores/study.ts` 新增 `moduleBurndown` computed，按 L2 节点遍历后代叶子（用 `collectDescendantIds` 邻接表 BFS），输出 `{moduleId, title, totalLeaves, doneLeaves, percent}[]`。computed 自动跟随 `nodes` 响应式刷新，与首页结算实时联动。
+  - `resetMock` 改为 JSON.parse(JSON.stringify(...)) 深拷贝，避免 settleTask 后污染 mock 字面量、下次重置初值不归零的隐患。
+  - 仪表盘 `pages/dashboard/index.vue` 整体重写：新增「今日任务进度」卡（与首页 todayCompletedCount 共享 store 状态），「模块燃尽进度」从单条改为多条横向进度条 + 三档颜色（弱 #fbbf24 / 中 #2dd4bf / 强 #15803d）+ 百分比文字。
+  - 数据模型零侵入：仍是单表 `knowledge_nodes`（已对齐 `supabase/migrations/0001_init.sql`），未来切真库只需把 mockNodes 替换为 `client.from('knowledge_nodes').select()` 注入源即可，无需改 store 或视图。
+
+- Playwright 严格验收（24/24 通过）：
+  - 新增 `harness/playwright-verify.mjs`：起 Node 静态服务器服务 `apps/app/dist/build/h5/` 产物，用 chromium iPhone 视口跑端到端断言。
+  - 24 项断言覆盖：文案 8 条（去 AI 化）+ 视觉 4 条（重置按钮透明底/主题色描边/主题色字、打卡按钮浅灰底）+ 结构 6 条（3 模块 + 各自分母 6/5/3 + 初值 0）+ 联动 3 条（结算后被点击任务从清单消失、任务集合发生变化、教综燃尽 0/6 → 1/6）+ 残留 3 条（无「高保真」「航向」「Quota」）。
+  - 落 4 张关键截图到 `harness/verify-shots/`：1-home-default、2-dashboard-initial、3-home-after-settle、4-dashboard-after-settle。
+  - 新增 `playwright` 1.61.0 至根 `devDependencies`，`npx playwright install chromium` 已下载本地浏览器内核（约 300MB，仅本地开发使用）。
+
+- 验证全绿：`pnpm test`（10 条核心单测）、`pnpm --filter @teacher-exam/app run type-check`（vue-tsc 0 错误）、`pnpm build:h5`、`pnpm build:mp-weixin`、`node harness/playwright-verify.mjs`（24/24）。
+
+- 串行锁副作用记录：结算 `leaf-edu-1` 后，PRD §三 §1 的串行推进锁会自动解锁同 parent 下 orderIndex 更大的 sibling（leaf-edu-2），所以首页任务总数可能不变（结算 1 个 + 解锁 1 个 = 净 0），但**任务集合内容发生了变化**。Playwright 验收脚本据此调整断言为「被点击的任务从清单中消失」，不要求总数减少。
+
+## 2026-06-24
+
 ### 微信小程序真机调试 `__wxAppCode__` 报错修复
 
 - 现象：微信开发者工具真机调试报 `SystemError (jsEnginScriptError) Can't find variable: __wxAppCode__`，紧接着 `Page route 错误(system error) routeDone with a webviewId 46 is not found`。错误栈始于 `WASubContext.js` 的 `recurseUsingComponents → injectComponentsRecursively`。

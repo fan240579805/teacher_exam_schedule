@@ -16,9 +16,9 @@
         </view>
 
         <view v-if="store.amberAlert.level !== 'none'" class="alert">
-            <text class="alert-title">航向修正预警 · {{ store.amberAlert.level.toUpperCase() }}</text>
+            <text class="alert-title">进度提醒 · {{ levelLabel(store.amberAlert.level) }}</text>
             <text class="alert-text">{{ store.amberAlert.message }}</text>
-            <text class="alert-meta">预计今日 {{ store.amberAlert.estimatedMinutes }} 分钟，Quota {{ store.amberAlert.quota.toFixed(1) }}</text>
+            <text class="alert-meta">预计今日 {{ store.amberAlert.estimatedMinutes }} 分钟 · 负荷指数 {{ store.amberAlert.quota.toFixed(1) }}</text>
         </view>
 
         <view class="section-head">
@@ -28,20 +28,20 @@
 
         <view v-for="task in store.todayTasks" :key="task.node.id" class="task-card" @click="openSheet(task.node.id)">
             <view>
-                <text class="task-priority">{{ task.priority }} · {{ task.reason === 'review' ? '复测' : '新学' }}</text>
+                <text class="task-priority">{{ task.priority }} · {{ task.reason === 'review' ? '复习' : '新学' }}</text>
                 <text class="task-title">{{ task.node.title }}</text>
-                <text v-if="task.node.trapMemo" class="memo">避坑：{{ task.node.trapMemo }}</text>
+                <text v-if="task.node.trapMemo" class="memo">小提醒：{{ task.node.trapMemo }}</text>
             </view>
             <text class="duration">{{ task.node.estimatedMinutes ?? 30 }}min</text>
         </view>
 
         <view v-if="store.todayTasks.length === 0" class="empty">
-            <text>今日任务已清空，可以通过底部按钮完成终极打卡。</text>
+            <text>今日任务已全部完成，去底部按钮记一笔随笔吧。</text>
         </view>
 
         <view v-if="activeNode" class="sheet-mask" @click="closeSheet">
             <view class="sheet" @click.stop>
-                <text class="sheet-title">动作结算台</text>
+                <text class="sheet-title">完成本节</text>
                 <text class="sheet-subtitle">{{ activeNode.title }}</text>
 
                 <picker :range="actionLabels" @change="onActionChange">
@@ -68,9 +68,9 @@
                     <input v-model.number="comprehensive.scorePoints" type="number" placeholder="踩分(0-100)" />
                 </view>
 
-                <input v-model="trapMemo" class="memo-input" placeholder="非必填：记录避坑口诀" />
+                <input v-model="trapMemo" class="memo-input" placeholder="选填：记下一句避坑口诀" />
 
-                <button class="primary-button" @click="submitSettlement">闭环此节点</button>
+                <button class="primary-button" @click="submitSettlement">标记完成</button>
                 <button class="text-button" @click="closeSheet">取消</button>
             </view>
         </view>
@@ -115,19 +115,24 @@ const activeNode = computed(() => store.nodes.find((node) => node.id === activeN
 const canCheckin = computed(() => store.todayTasks.length === 0 && store.todayTotalCount > 0);
 const checkinButtonText = computed(() => {
     if (store.todayCheckin) {
-        return `今日已打卡，连续 ${store.todayCheckin.streakDays} 天`;
+        return `今日已打卡 · 连续 ${store.todayCheckin.streakDays} 天`;
     }
 
     if (canCheckin.value) {
-        return '已完成今日所有任务，去打卡';
+        return '今日任务已完成 · 去写随笔';
     }
 
-    return `今日任务执行中 (${store.todayProgressText})`;
+    return `今日任务进行中 (${store.todayProgressText})`;
 });
 const weekDays = ['一', '二', '三', '四', '五', '六', '日'].map((label, index) => ({
     label,
     active: index < 4
 }));
+
+function levelLabel(level: 'none' | 'watch' | 'amber' | 'red') {
+    const map = { none: '', watch: '轻微偏移', amber: '需要调整', red: '偏移严重' } as const;
+    return map[level];
+}
 
 function openSheet(nodeId: string) {
     activeNodeId.value = nodeId;
@@ -158,7 +163,7 @@ function submitSettlement() {
             : { ...comprehensive };
 
     store.settleTask(activeNode.value.id, actionType.value, payload, trapMemo.value);
-    uni.showToast({ title: '已闭环', icon: 'success' });
+    uni.showToast({ title: '已完成', icon: 'success' });
     closeSheet();
 }
 
@@ -232,19 +237,26 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 .ghost-button,
 .primary-button {
     border-radius: 999rpx;
+    font-size: 26rpx;
+}
+
+.primary-button {
     background: #0f766e;
     color: #fff;
-    font-size: 26rpx;
 }
 
 .ghost-button {
     flex-shrink: 0;
-    width: 72px;
-    height: 56px;
-    margin: 8px 0 0;
+    width: 144rpx;
+    height: 64rpx;
+    margin: 8rpx 0 0;
     padding: 0;
-    line-height: 56px;
-    font-size: 16px;
+    border: 2rpx solid #0f766e;
+    background: transparent;
+    color: #0f766e;
+    line-height: 60rpx;
+    font-size: 26rpx;
+    font-weight: 600;
 }
 
 .week-strip {
@@ -388,9 +400,10 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 
 .checkin-button {
     min-height: 52px;
+    border: none;
     border-radius: 999rpx;
-    background: #d1d5db;
-    color: #4b5563;
+    background: #e5e7eb;
+    color: #9ca3af;
     font-size: 16px;
     font-weight: 800;
 }

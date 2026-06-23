@@ -90,3 +90,22 @@
 - [x] 修复 `apps/app/src/manifest.json`：顶层 `appid` 置空，`mp-weixin.appid` 填 `wxf68746786a764562`。
 - [x] 补齐 `mp-weixin.setting`：`es6=true`、`minified=true`、`postcss=true`，并新增 `lazyCodeLoading: requiredComponents`。
 - [ ] 用户侧验证（待用户执行）：重新 `pnpm --filter @teacher-exam/app run dev:mp-weixin`，微信开发者工具导入产物目录 `apps/app/dist/dev/mp-weixin`，确认 AppID 显示为 `wxf68746786a764562`，清缓存→普通编译并真机调试通过。
+
+## P9 文案、UI 与模块燃尽数据结构改造
+
+按 PRD §四 Tab3「Burndown Charts」严格对齐：模块燃尽以 L2 大模块为基准，多条横向进度条与首页结算实时联动；同步完成全站文案去 AI 化与按钮 UI 一致性修复。
+
+- [x] mock 数据扩充为 3 个 L2 模块 × 14 个 L7 叶子（教综 6 + 学科 5 + 职业能力 3），所有标题、`trapMemo`、`mockDailyCheckins.memo` 改写为真实考编生口吻。
+- [x] 全 UI 文案去 AI 化：首页（航向修正/动作结算台/闭环/Quota/避坑/已闭环）、仪表盘（Dashboard & Asset Vault/战果照片）、打卡弹窗（高保真执行）、manifest 描述。
+- [x] 首页「重置」按钮改为透明底 + 主题色描边 + 主题色字的次级按钮规范。
+- [x] 首页打卡按钮未就绪态改为浅灰底 + 灰字（`#e5e7eb` + `#9ca3af`），与就绪态主题色形成清晰对比。
+- [x] `DailyCheckinModal` 关闭按钮 border/字色统一，连续天数文案从战损红改为主题色，按钮组加 `::after` reset。
+- [x] `App.vue` 全局补 `button::after { border: none }`，彻底清除 uni-app H5/小程序原生 button 的 1rpx 幽灵灰边。
+- [x] `stores/study.ts` 新增 `moduleBurndown` computed（基于 L2 邻接表 BFS 收集后代叶子），与 nodes 响应式联动。
+- [x] `resetMock` 改为 JSON 深拷贝避免 mock 字面量被污染。
+- [x] 仪表盘整体重写：新增「今日任务进度」卡 + 多模块燃尽多条横向进度条 + 三档颜色 + 百分比。
+- [x] 数据模型零侵入：仍是单表 `knowledge_nodes`，迁移 Supabase 时只替换 mockNodes 注入源即可。
+- [x] 新增 Playwright 严格验收脚本 `harness/playwright-verify.mjs`：Node 静态服务器 + chromium iPhone 视口，24 项断言覆盖文案/视觉/结构/联动/残留，落 4 张关键截图。
+- [x] 装 `playwright` 1.61.0 至 root devDependencies，`npx playwright install chromium` 下载本地浏览器内核。
+- [x] 验证全绿：`pnpm test`（10 条单测）、`pnpm type-check`、`pnpm build:h5`、`pnpm build:mp-weixin`、Playwright 24/24。
+- [ ] 用户侧最终验收（待用户执行）：微信开发者工具导入 `apps/app/dist/build/mp-weixin` 真机走查首页、仪表盘、打卡弹窗三个画面；连续完成 2 个任务确认对应 L2 模块燃尽 0→2 平滑递增。

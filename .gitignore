@@ -18,3 +18,6 @@ unpackage/
 .temp/
 supabase/.branches/
 supabase/.temp/
+
+# Playwright 验收截图产物（每次运行会重新生成，无需入库）
+harness/verify-shots/

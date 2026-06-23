@@ -26,6 +26,31 @@ export const useStudyStore = defineStore('study', () => {
     }));
 
     const homepageNodes = computed(() => nodes.value.filter((node) => node.level <= 3));
+
+    // 模块燃尽：按 L2 大模块统计闭环进度，对应 PRD §四 Tab3 的「Burndown Charts」。
+    // 数据源就是 nodes，因此首页结算后 done 数量自动联动这里，不需要额外推送。
+    const moduleBurndown = computed(() => {
+        const modules = nodes.value
+            .filter((node) => node.level === 2)
+            .sort((a, b) => a.orderIndex - b.orderIndex);
+
+        return modules.map((module) => {
+            const subtreeIds = collectDescendantIds(nodes.value, module.id);
+            const leaves = nodes.value.filter((node) => subtreeIds.has(node.id) && node.isLeaf && node.status !== 'archived');
+            const totalLeaves = leaves.length;
+            const doneLeaves = leaves.filter((leaf) => leaf.status === 'done').length;
+            const percent = totalLeaves === 0 ? 0 : Math.round((doneLeaves / totalLeaves) * 100);
+
+            return {
+                moduleId: module.id,
+                title: module.title,
+                totalLeaves,
+                doneLeaves,
+                percent
+            };
+        });
+    });
+
     const todayKey = computed(() => toDateKey(new Date()));
     const todayCompletedCount = computed(() => nodes.value.filter((node) => (
         node.isLeaf
@@ -168,10 +193,11 @@ export const useStudyStore = defineStore('study', () => {
     }
 
     function resetMock() {
-        nodes.value = mockNodes;
-        reviews.value = mockReviews;
-        heatmap.value = mockHeatmap;
-        dailyCheckins.value = mockDailyCheckins;
+        // 用 JSON 深拷贝避免 mock 字面量被后续 settle 修改后污染下一次 reset。
+        nodes.value = JSON.parse(JSON.stringify(mockNodes));
+        reviews.value = JSON.parse(JSON.stringify(mockReviews));
+        heatmap.value = JSON.parse(JSON.stringify(mockHeatmap));
+        dailyCheckins.value = JSON.parse(JSON.stringify(mockDailyCheckins));
         persistNodes();
         persistDailyCheckins();
     }
@@ -203,6 +229,7 @@ export const useStudyStore = defineStore('study', () => {
         todayTasks,
         amberAlert,
         homepageNodes,
+        moduleBurndown,
         todayCompletedCount,
         todayTotalCount,
         todayProgressText,
@@ -252,4 +279,20 @@ function calculateStreak(checkins: DailyCheckin[], dateKey: string) {
 
 function toDateKey(date: Date) {
     return date.toISOString().slice(0, 10);
+}
+
+// 邻接表收集 rootId 自身 + 所有后代的 id，用于按 L2 模块汇总叶子。
+function collectDescendantIds(nodes: KnowledgeNode[], rootId: string): Set<string> {
+    const result = new Set<string>([rootId]);
+    let added = true;
+    while (added) {
+        added = false;
+        for (const node of nodes) {
+            if (node.parentId && result.has(node.parentId) && !result.has(node.id)) {
+                result.add(node.id);
+                added = true;
+            }
+        }
+    }
+    return result;
 }

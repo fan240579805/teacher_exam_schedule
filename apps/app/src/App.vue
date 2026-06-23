@@ -22,5 +22,12 @@ page {
 
 button {
     border: 0;
+    background: transparent;
+    line-height: normal;
+}
+
+/* 清除小程序原生 button 自带的 1rpx solid #ccc 细边，避免幽灵边框 */
+button::after {
+    border: none;
 }
 </style>

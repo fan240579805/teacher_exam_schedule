@@ -9,7 +9,7 @@
             <view class="streak-card">
                 <view>
                     <text class="workspace">{{ workspaceTitle }}</text>
-                    <text class="streak">已连续坚持高保真执行 {{ streakDays }} 天</text>
+                    <text class="streak">今天是你连续打卡的第 {{ streakDays }} 天</text>
                 </view>
                 <text class="history">历史记录</text>
             </view>
@@ -22,8 +22,8 @@
             />
 
             <button class="upload-card" @click="chooseImage">
-                <text>{{ imagePath ? '已选择 1 张图片' : '添加图片（限 1 张）' }}</text>
-                <text class="upload-tip">{{ imagePath ? '可重新选择替换' : '支持拍摄或上传今日战果照片' }}</text>
+                <text>{{ imagePath ? '已选择 1 张图片' : '添加一张今天的笔记或实拍' }}</text>
+                <text class="upload-tip">{{ imagePath ? '点击可以重新选择' : '可以是草稿、笔记本、录音截图任你' }}</text>
             </button>
 
             <view class="footer">
@@ -104,12 +104,20 @@ function submit() {
 }
 
 .close-button {
-    width: 72rpx;
-    height: 72rpx;
+    width: 64rpx;
+    height: 64rpx;
+    padding: 0;
+    border: none;
     border-radius: 50%;
     background: #f3f4f6;
-    color: #1f2933;
-    line-height: 72rpx;
+    color: #6b7280;
+    font-size: 36rpx;
+    line-height: 64rpx;
+    text-align: center;
+}
+
+.close-button::after {
+    border: none;
 }
 
 .streak-card {
@@ -131,7 +139,7 @@ function submit() {
 
 .streak {
     margin-top: 8rpx;
-    color: #b91c1c;
+    color: #0f766e;
     font-size: 24rpx;
 }
 
@@ -176,8 +184,14 @@ function submit() {
 .save-button {
     flex: 1;
     min-height: 88rpx;
+    border: none;
     border-radius: 999rpx;
     font-size: 28rpx;
+}
+
+.later-button::after,
+.save-button::after {
+    border: none;
 }
 
 .later-button {
