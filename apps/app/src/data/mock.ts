@@ -1,7 +1,6 @@
-import type { DailyCheckin, HeatmapDay, KnowledgeNode, ReviewState, Workspace } from '@teacher-exam/types';
+import type { DailyCheckin, HeatmapDay, KnowledgeNode, ReviewState, StudyLog, Workspace } from '@teacher-exam/types';
 
 const now = '2026-06-22T08:00:00.000Z';
-
 export const mockWorkspace: Workspace = {
     id: 'workspace-demo',
     userId: 'local-user',
@@ -81,12 +80,84 @@ export const mockReviews: ReviewState[] = [
     }
 ];
 
+// 35 天热力数据（5 行 x 7 列），覆盖 2026-05-19 ~ 2026-06-22 当周
+// 工作日普遍较高（90~210 分钟），周末有低谷与断签，更贴近真实备考节奏
 export const mockHeatmap: HeatmapDay[] = [
+    { date: '2026-05-19', minutes: 150, closedCount: 3, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-20', minutes: 110, closedCount: 2, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-21', minutes: 200, closedCount: 4, hasCheckin: true, imageUrl: 'mock://checkins/2026-05-21.jpg' },
+    { date: '2026-05-22', minutes: 90, closedCount: 2, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-23', minutes: 0, closedCount: 0, hasCheckin: false, imageUrl: null },
+    { date: '2026-05-24', minutes: 60, closedCount: 1, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-25', minutes: 210, closedCount: 5, hasCheckin: true, imageUrl: 'mock://checkins/2026-05-25.jpg' },
+    { date: '2026-05-26', minutes: 180, closedCount: 4, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-27', minutes: 130, closedCount: 3, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-28', minutes: 95, closedCount: 2, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-29', minutes: 165, closedCount: 4, hasCheckin: true, imageUrl: null },
+    { date: '2026-05-30', minutes: 0, closedCount: 0, hasCheckin: false, imageUrl: null },
+    { date: '2026-05-31', minutes: 75, closedCount: 1, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-01', minutes: 200, closedCount: 5, hasCheckin: true, imageUrl: 'mock://checkins/2026-06-01.jpg' },
+    { date: '2026-06-02', minutes: 150, closedCount: 3, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-03', minutes: 130, closedCount: 3, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-04', minutes: 100, closedCount: 2, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-05', minutes: 175, closedCount: 4, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-06', minutes: 0, closedCount: 0, hasCheckin: false, imageUrl: null },
+    { date: '2026-06-07', minutes: 60, closedCount: 1, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-08', minutes: 195, closedCount: 4, hasCheckin: true, imageUrl: 'mock://checkins/2026-06-08.jpg' },
+    { date: '2026-06-09', minutes: 165, closedCount: 4, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-10', minutes: 140, closedCount: 3, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-11', minutes: 100, closedCount: 2, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-12', minutes: 185, closedCount: 4, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-13', minutes: 0, closedCount: 0, hasCheckin: false, imageUrl: null },
+    { date: '2026-06-14', minutes: 90, closedCount: 2, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-15', minutes: 175, closedCount: 4, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-16', minutes: 145, closedCount: 3, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-17', minutes: 110, closedCount: 2, hasCheckin: true, imageUrl: null },
     { date: '2026-06-18', minutes: 120, closedCount: 3, hasCheckin: true, imageUrl: null },
     { date: '2026-06-19', minutes: 180, closedCount: 4, hasCheckin: true, imageUrl: 'mock://checkins/2026-06-19.jpg' },
     { date: '2026-06-20', minutes: 60, closedCount: 1, hasCheckin: true, imageUrl: null },
     { date: '2026-06-21', minutes: 210, closedCount: 5, hasCheckin: true, imageUrl: 'mock://checkins/2026-06-21.jpg' },
     { date: '2026-06-22', minutes: 0, closedCount: 0, hasCheckin: false, imageUrl: null }
+];
+
+// 客观刷题日志：用于「刷题正确率」与「日均学习时长」的统计
+export const mockActionLogs: StudyLog[] = [
+    {
+        id: 'log-edu-1-obj',
+        workspaceId: mockWorkspace.id,
+        nodeId: 'leaf-edu-1',
+        actionType: 'objective',
+        payload: { totalCount: 30, wrongCount: 4 },
+        durationMinutes: 35,
+        score: 87,
+        mastery: 87,
+        trapMemo: null,
+        createdAt: '2026-06-18T20:30:00.000Z'
+    },
+    {
+        id: 'log-psy-1-obj',
+        workspaceId: mockWorkspace.id,
+        nodeId: 'leaf-psy-1',
+        actionType: 'objective',
+        payload: { totalCount: 25, wrongCount: 3 },
+        durationMinutes: 30,
+        score: 88,
+        mastery: 88,
+        trapMemo: null,
+        createdAt: '2026-06-19T20:00:00.000Z'
+    },
+    {
+        id: 'log-subj-1-comp',
+        workspaceId: mockWorkspace.id,
+        nodeId: 'leaf-subj-1',
+        actionType: 'comprehensive',
+        payload: { durationMinutes: 35, scorePoints: 80 },
+        durationMinutes: 35,
+        score: 80,
+        mastery: 80,
+        trapMemo: null,
+        createdAt: '2026-06-21T19:30:00.000Z'
+    }
 ];
 
 export const mockDailyCheckins: DailyCheckin[] = [

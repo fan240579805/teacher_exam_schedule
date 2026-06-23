@@ -1,47 +1,85 @@
 <template>
     <view class="page">
         <view class="summary">
-            <text class="eyebrow">我的进度</text>
-            <text class="title">备考节奏一目了然</text>
-            <text class="desc">下面这些数据全部来自首页的真实结算，不掺一点掺水操作。</text>
+            <text class="eyebrow">个人复习看板</text>
+            <text class="title">深教考通 · 我的统计</text>
+            <text class="desc">所有数据都来自你在首页的真实结算，不掺水。</text>
         </view>
 
-        <view class="card today">
-            <view class="today-head">
-                <text class="card-title">今日任务进度</text>
-                <text class="today-count">{{ store.todayCompletedCount }} / {{ Math.max(store.todayTotalCount, 1) }}</text>
-            </view>
-            <view class="progress">
-                <view class="bar" :style="{ width: `${todayPercent}%` }" />
-            </view>
-            <text class="desc">{{ todayHint }}</text>
-        </view>
-
+        <!-- 1. 顶部：打卡日历（GitHub Contributions Style 热力图） -->
         <view class="card">
-            <text class="card-title">月度打卡热力</text>
+            <view class="card-head">
+                <text class="card-title">打卡日历</text>
+                <text class="card-sub">最近 5 周</text>
+            </view>
             <view class="heat-grid">
-                <view v-for="day in store.heatmap" :key="day.date" class="heat-cell" :class="levelClass(day.minutes)">
-                    <text>{{ day.date.slice(8) }}</text>
-                    <text v-if="day.imageUrl" class="film">▣</text>
+                <view
+                    v-for="day in heatmapCells"
+                    :key="day.date"
+                    class="heat-cell"
+                    :class="day.levelClass"
+                >
+                    <text v-if="day.memoFlag" class="badge memo">★</text>
+                    <text v-if="day.imageFlag" class="badge image">▣</text>
                 </view>
             </view>
-            <text class="desc">绿色越深表示当天投入时长越长，右上角▣表示当天上传了学习记录照片。</text>
+            <view class="heat-legend">
+                <text class="legend-text">少</text>
+                <view class="legend-cell hot-0" />
+                <view class="legend-cell hot-1" />
+                <view class="legend-cell hot-2" />
+                <view class="legend-cell hot-3" />
+                <text class="legend-text">多</text>
+                <text class="legend-extra">★ 当日有随笔　▣ 当日有照片</text>
+            </view>
         </view>
 
+        <!-- 2. 中上部：核心数据概览 (2x2 卡片网格) -->
+        <view class="metric-grid">
+            <view class="metric-card">
+                <text class="metric-label">完美达标天数</text>
+                <text class="metric-value">{{ store.perfectDays }}<text class="metric-unit"> 天</text></text>
+                <text class="metric-hint">100% 完成当日配额的天数</text>
+            </view>
+            <view class="metric-card">
+                <text class="metric-label">日均学习时长</text>
+                <text class="metric-value">{{ store.avgStudyHours }}<text class="metric-unit"> 小时</text></text>
+                <text class="metric-hint">基于实际录入时长</text>
+            </view>
+            <view class="metric-card">
+                <text class="metric-label">已掌握考点</text>
+                <text class="metric-value">{{ store.masteredCount }}<text class="metric-unit"> / {{ store.totalLeafCount }}</text></text>
+                <text class="metric-hint">叶子节点 100% 掌握</text>
+            </view>
+            <view class="metric-card">
+                <text class="metric-label">刷题正确率</text>
+                <text class="metric-value">{{ store.objectiveAccuracy }}<text class="metric-unit">%</text></text>
+                <text class="metric-hint">客观题加权正确率</text>
+            </view>
+        </view>
+
+        <!-- 3a. 最近打卡随笔 -->
         <view class="card">
             <text class="card-title">最近打卡随笔</text>
-            <view v-if="recentCheckins.length === 0" class="empty-row">
+            <view v-if="recentMemos.length === 0" class="empty-row">
                 <text>还没有随笔，今天完成所有任务后去首页底部打卡试试。</text>
             </view>
-            <view v-for="item in recentCheckins" :key="item.id" class="checkin-row">
-                <text class="checkin-date">{{ item.checkinDate }}</text>
-                <text class="checkin-memo">{{ item.memo || '当天没写感悟，只完成了打卡。' }}</text>
+            <view v-for="item in recentMemos" :key="item.id" class="memo-card">
+                <view class="memo-head">
+                    <text class="memo-date">{{ formatDate(item.checkinDate) }}</text>
+                    <text class="memo-streak">已坚持 {{ item.streakDays }} 天</text>
+                </view>
+                <text class="memo-body">{{ item.memo || '当天没写文字，只完成了打卡。' }}</text>
+                <view v-if="item.imageUrl" class="memo-image">
+                    <text class="image-placeholder">📷 战果照片（{{ item.imageUrl.startsWith('mock://') ? '本地占位' : '已上传' }}）</text>
+                </view>
             </view>
         </view>
 
+        <!-- 3b. 各科通关进度 -->
         <view class="card">
-            <text class="card-title">模块燃尽进度</text>
-            <text class="desc">按三大模块独立追踪，对应你在首页结算的每个知识点。</text>
+            <text class="card-title">各科通关进度</text>
+            <text class="desc">按 L2 大模块统计，对应你在首页结算的考点。</text>
             <view v-for="module in store.moduleBurndown" :key="module.moduleId" class="burn-block">
                 <view class="burn-row">
                     <text class="module-title">{{ module.title }}</text>
@@ -54,20 +92,38 @@
                         :style="{ width: `${module.percent}%` }"
                     />
                 </view>
-                <text class="module-percent">{{ module.percent }}%</text>
+                <text class="module-percent">{{ module.percent }}% （掌握 {{ module.doneLeaves }}/{{ module.totalLeaves }} 考点）</text>
             </view>
             <view v-if="store.moduleBurndown.length === 0" class="empty-row">
-                <text>还没有模块数据，点击右上角“重置”可以载入示例计划。</text>
+                <text>还没有模块数据，去"我的"页面切换备考目标。</text>
             </view>
         </view>
 
+        <!-- 4. 面试能力雷达图（CSS 五维雷达） -->
         <view class="card">
-            <text class="card-title">面试自评清单</text>
-            <view v-for="item in checklist" :key="item" class="check-row">
-                <text class="check">✓</text>
-                <text>{{ item }}</text>
+            <text class="card-title">面试能力雷达</text>
+            <text class="desc">基于已掌握考点估算，越向外圈越成熟。</text>
+            <view class="radar-wrap">
+                <view class="radar-bg" />
+                <view class="radar-bg radar-bg-2" />
+                <view class="radar-bg radar-bg-3" />
+                <view
+                    v-for="(point, index) in store.interviewRadar"
+                    :key="point.label"
+                    class="radar-axis"
+                    :style="{ transform: `rotate(${index * 72}deg)` }"
+                />
+                <view
+                    v-for="(point, index) in radarLayoutPoints"
+                    :key="point.label"
+                    class="radar-label"
+                    :style="{ left: `${point.x}%`, top: `${point.y}%` }"
+                >
+                    <text class="radar-label-text">{{ point.label }}</text>
+                    <text class="radar-label-score">{{ point.score }}</text>
+                </view>
+                <view class="radar-poly" :style="{ clipPath: radarClipPath }" />
             </view>
-            <text class="desc">正式上场前，这几项要逐条对一遍。</text>
         </view>
     </view>
 </template>
@@ -77,39 +133,67 @@ import { computed } from 'vue';
 import { useStudyStore } from '../../stores/study';
 
 const store = useStudyStore();
-const recentCheckins = computed(() => [...store.dailyCheckins].sort((a, b) => b.checkinDate.localeCompare(a.checkinDate)).slice(0, 3));
-const checklist = ['耗时控制达标', '没有明显卡壳', '板书结构完整', '环节过渡自然'];
 
-const todayPercent = computed(() => {
-    const total = Math.max(store.todayTotalCount, 1);
-    return Math.round((store.todayCompletedCount / total) * 100);
+// 把 heatmap 整理成 5 行 x 7 列的网格，每个单元格携带强度等级与"是否有随笔/照片"标记。
+const heatmapCells = computed(() => {
+    const memoSet = new Set(store.dailyCheckins.filter((c) => c.memo.trim().length > 0).map((c) => c.checkinDate));
+    const imageSet = new Set(store.dailyCheckins.filter((c) => !!c.imageUrl).map((c) => c.checkinDate));
+
+    return store.heatmap.slice(-35).map((day) => ({
+        date: day.date,
+        levelClass: levelClassByMinutes(day.minutes),
+        memoFlag: memoSet.has(day.date),
+        imageFlag: imageSet.has(day.date)
+    }));
 });
 
-const todayHint = computed(() => {
-    if (store.todayTotalCount === 0) {
-        return '今天还没有派发任务，可以先去首页查看。';
-    }
+const recentMemos = computed(() => [...store.dailyCheckins]
+    .sort((a, b) => b.checkinDate.localeCompare(a.checkinDate))
+    .slice(0, 3));
 
-    if (store.todayCompletedCount >= store.todayTotalCount) {
-        return store.todayCheckin ? '今天的打卡已记录，明天继续。' : '所有任务已完成，记得回首页底部打卡留念。';
-    }
-
-    return `还差 ${store.todayTotalCount - store.todayCompletedCount} 项就能解锁今天的打卡。`;
+// 雷达图坐标布局（百分比，相对 240rpx 容器中心）。
+const radarLayoutPoints = computed(() => {
+    // 5 个轴对应 90°/162°/234°/306°/378°(=18°) 的方位（顶端开始顺时针）
+    // 用 CSS 百分比定位标签即可，不依赖 canvas。
+    const positions = [
+        { x: 50, y: -2 },
+        { x: 99, y: 32 },
+        { x: 80, y: 92 },
+        { x: 20, y: 92 },
+        { x: 1, y: 32 }
+    ];
+    return store.interviewRadar.map((point, index) => ({
+        ...point,
+        x: positions[index].x,
+        y: positions[index].y
+    }));
 });
 
-function levelClass(minutes: number) {
+// 把 5 个分数转为 polygon clip-path（基于 240rpx 容器，相对 0~100 % 坐标）。
+const radarClipPath = computed(() => {
+    const cx = 50;
+    const cy = 50;
+    const radius = 45; // 与 .radar-bg 半径同步
+    const angles = [-Math.PI / 2, -Math.PI / 2 + (2 * Math.PI / 5), -Math.PI / 2 + (4 * Math.PI / 5), -Math.PI / 2 + (6 * Math.PI / 5), -Math.PI / 2 + (8 * Math.PI / 5)];
+    const points = store.interviewRadar.map((point, i) => {
+        const r = (point.score / 100) * radius;
+        const x = cx + r * Math.cos(angles[i]);
+        const y = cy + r * Math.sin(angles[i]);
+        return `${x.toFixed(2)}% ${y.toFixed(2)}%`;
+    });
+    return `polygon(${points.join(', ')})`;
+});
+
+function levelClassByMinutes(minutes: number) {
     if (minutes >= 180) {
         return 'hot-3';
     }
-
     if (minutes >= 90) {
         return 'hot-2';
     }
-
     if (minutes > 0) {
         return 'hot-1';
     }
-
     return 'hot-0';
 }
 
@@ -117,12 +201,15 @@ function burnLevelClass(percent: number) {
     if (percent >= 80) {
         return 'burn-strong';
     }
-
     if (percent >= 40) {
         return 'burn-mid';
     }
-
     return 'burn-weak';
+}
+
+function formatDate(iso: string) {
+    const d = new Date(iso);
+    return `${String(d.getMonth() + 1).padStart(2, '0')} 月 ${String(d.getDate()).padStart(2, '0')} 日`;
 }
 </script>
 
@@ -138,6 +225,7 @@ function burnLevelClass(percent: number) {
     padding: 32rpx;
     border-radius: 32rpx;
     background: #fff;
+    box-shadow: 0 8rpx 24rpx rgba(31, 41, 51, 0.04);
 }
 
 .eyebrow {
@@ -162,36 +250,30 @@ function burnLevelClass(percent: number) {
     line-height: 1.5;
 }
 
-.today {
-    background: #ecfdf5;
-}
-
-.today-head {
+.card-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
-.today-count {
-    color: #0f766e;
-    font-size: 30rpx;
-    font-weight: 800;
+.card-sub {
+    color: #6b7280;
+    font-size: 22rpx;
 }
 
+/* ====== 热力日历 ====== */
 .heat-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 12rpx;
+    gap: 10rpx;
     margin-top: 24rpx;
 }
 
 .heat-cell {
     position: relative;
+    aspect-ratio: 1 / 1;
     min-height: 64rpx;
-    border-radius: 14rpx;
-    text-align: center;
-    line-height: 64rpx;
-    color: #1f2933;
+    border-radius: 12rpx;
 }
 
 .hot-0 {
@@ -208,47 +290,138 @@ function burnLevelClass(percent: number) {
 
 .hot-3 {
     background: #15803d;
-    color: #fff;
 }
 
-.film {
+.badge {
     position: absolute;
-    right: 6rpx;
-    top: -16rpx;
+    right: 4rpx;
+    top: 4rpx;
+    font-size: 18rpx;
+    line-height: 1;
+}
+
+.badge.memo {
+    color: #facc15;
+}
+
+.badge.image {
+    right: 22rpx;
+    color: #fff;
+    text-shadow: 0 0 4rpx rgba(0, 0, 0, 0.6);
+}
+
+.heat-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: 18rpx;
+}
+
+.legend-text {
+    color: #6b7280;
     font-size: 22rpx;
 }
 
-.burn-block {
-    margin-top: 24rpx;
+.legend-cell {
+    width: 24rpx;
+    height: 24rpx;
+    border-radius: 6rpx;
 }
 
-.burn-row,
-.check-row,
-.checkin-row {
+.legend-extra {
+    margin-left: auto;
+    color: #6b7280;
+    font-size: 22rpx;
+}
+
+/* ====== 核心指标 2x2 ====== */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18rpx;
+    margin-bottom: 24rpx;
+}
+
+.metric-card {
+    padding: 28rpx 24rpx;
+    border-radius: 28rpx;
+    background: #fff;
+    box-shadow: 0 4rpx 18rpx rgba(31, 41, 51, 0.04);
+}
+
+.metric-label {
+    display: block;
+    color: #6b7280;
+    font-size: 24rpx;
+}
+
+.metric-value {
+    display: block;
+    margin-top: 12rpx;
+    color: #0f766e;
+    font-size: 44rpx;
+    font-weight: 800;
+}
+
+.metric-unit {
+    color: #1f2933;
+    font-size: 26rpx;
+    font-weight: 600;
+}
+
+.metric-hint {
+    display: block;
+    margin-top: 8rpx;
+    color: #9ca3af;
+    font-size: 20rpx;
+}
+
+/* ====== 最近随笔 ====== */
+.memo-card {
+    margin-top: 20rpx;
+    padding: 24rpx;
+    border-radius: 24rpx;
+    background: #f9fafb;
+}
+
+.memo-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 16rpx;
+    margin-bottom: 12rpx;
 }
 
-.checkin-row {
-    align-items: flex-start;
-    gap: 20rpx;
-    justify-content: flex-start;
-}
-
-.checkin-date {
-    color: #0f766e;
-    font-size: 24rpx;
+.memo-date {
+    color: #1f2933;
+    font-size: 26rpx;
     font-weight: 700;
 }
 
-.checkin-memo {
-    flex: 1;
-    color: #4b5563;
-    font-size: 24rpx;
-    line-height: 1.5;
-    text-align: left;
+.memo-streak {
+    color: #0f766e;
+    font-size: 22rpx;
+    font-weight: 600;
+}
+
+.memo-body {
+    display: block;
+    color: #374151;
+    font-size: 26rpx;
+    line-height: 1.6;
+}
+
+.memo-image {
+    margin-top: 14rpx;
+    padding: 16rpx;
+    border: 2rpx dashed #d1d5db;
+    border-radius: 16rpx;
+    background: #fff;
+}
+
+.image-placeholder {
+    color: #6b7280;
+    font-size: 22rpx;
 }
 
 .empty-row {
@@ -261,10 +434,21 @@ function burnLevelClass(percent: number) {
     line-height: 1.5;
 }
 
+/* ====== 模块进度 ====== */
+.burn-block {
+    margin-top: 24rpx;
+}
+
+.burn-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .module-title {
+    color: #1f2933;
     font-size: 28rpx;
     font-weight: 700;
-    color: #1f2933;
 }
 
 .module-count {
@@ -308,8 +492,72 @@ function burnLevelClass(percent: number) {
     background: #15803d;
 }
 
-.check {
-    color: #16a34a;
+/* ====== 雷达图 ====== */
+.radar-wrap {
+    position: relative;
+    width: 480rpx;
+    height: 480rpx;
+    margin: 32rpx auto 0;
+}
+
+.radar-bg {
+    position: absolute;
+    top: 5%;
+    left: 5%;
+    width: 90%;
+    height: 90%;
+    border: 2rpx solid #e5e7eb;
+    border-radius: 50%;
+}
+
+.radar-bg-2 {
+    top: 20%;
+    left: 20%;
+    width: 60%;
+    height: 60%;
+}
+
+.radar-bg-3 {
+    top: 35%;
+    left: 35%;
+    width: 30%;
+    height: 30%;
+}
+
+.radar-axis {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2rpx;
+    height: 45%;
+    background: #e5e7eb;
+    transform-origin: top center;
+}
+
+.radar-poly {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 118, 110, 0.35);
+    border: 2rpx solid #0f766e;
+}
+
+.radar-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.radar-label-text {
+    display: block;
+    color: #1f2933;
+    font-size: 22rpx;
+    font-weight: 700;
+}
+
+.radar-label-score {
+    display: block;
+    color: #0f766e;
+    font-size: 22rpx;
     font-weight: 800;
 }
 </style>

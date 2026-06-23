@@ -125,3 +125,22 @@
 - [x] 验证全绿：Playwright 32/32、`pnpm test` 10/10、`vue-tsc` 0 错误、`build:h5` + `build:mp-weixin` OK。
 - [x] mp-weixin 产物 `app.wxss` 确认完整保留 button 双重 reset，小程序端兼容。
 - [ ] 用户侧最终验收（待用户执行）：微信开发者工具导入 `apps/app/dist/build/mp-weixin` 真机走查三处按钮：①首页底部打卡按钮（未就绪+就绪两态）；②sheet 标记完成主按钮；③打卡随笔弹窗 × 与底部「以后再说/保存记录」按钮组。预期：所有按钮单色一体填充、无渐变/双色、无 1rpx 灰描边。
+
+## P10 Tab 3「统计」/ Tab 4「我的」+ 周历改版（v6.0）
+
+按 v6.0 需求文档落地三块功能 + PRD 同步 + Playwright 升级。
+
+- [x] **首页周历改版**：DOM 改为「中文星期 + 日期数字 + 已打卡圆点」三段式，当日填充主题色圆形 + 反白文字；`weekDays` 从静态数组改为以"今天"为基准回退到本周一连续 7 天的 computed，结合 `dailyCheckins.checkinDate` 集合判定 `checked`。
+- [x] **首页重置按钮**：文案「重置」→「↻ 重置计划」，样式从主题色描边改为透明底中灰字弱化按钮；`.hero` 改 `flex-start` 让长标题与按钮一行排齐。
+- [x] **Tab 3 统计页**（[apps/app/src/pages/dashboard/index.vue](apps/app/src/pages/dashboard/index.vue)）整体重写：5x7=35 格热力日历（4 档颜色 + ⭐/▣ 徽章 + 图例条）+ 2x2 核心指标卡（完美达标天数 / 日均学习时长 / 已掌握考点 / 刷题正确率）+ 最近随笔列表 + 各科通关进度（统一为 "{N}% (掌握 a/b 考点)" 文案）+ 纯 CSS clip-path 实现的五维雷达图（时间把控/语言流畅/板书完整/教态/逻辑框架）。
+- [x] **Tab 4 我的页**（[apps/app/src/pages/profile/index.vue](apps/app/src/pages/profile/index.vue)）新建：圆形主题色头像 + 同步状态 + 倒计时卡 + 复习计划管理 / 考点库管理 / 关于与帮助 三组列表 + 200rpx 虚线广告位占位 + 底部红线说明。
+- [x] **每日任务上限调节器**：列表项内联 ⊖/⊕ + 数值显示，绑定 `store.dailyTaskCapHours`（区间 2-12）。
+- [x] **暂不复习考点库**：单条恢复 + 一键全部恢复，调用 `store.restoreArchived()`，恢复后立即触发 `unlockNextSiblings`。
+- [x] **本地日志清理**：红字 Danger 按钮，`uni.showModal` 二次确认后调用 `store.clearLocalCache()` 清 Storage + resetMock。
+- [x] **tabBar 升级到 4 个 tab**：今日 / 知识树 / 统计 / 我的；`pages.json` 新增 `pages/profile/index` 注册并把 dashboard 标题改为"统计"。
+- [x] **Pinia store 扩展**：新增 `actionLogs` / `dailyTaskCapHours` / `cloudSyncStatus` 三个 ref + 7 个 computed（`perfectDays` / `avgStudyHours` / `masteredCount` / `totalLeafCount` / `objectiveAccuracy` / `interviewRadar` / `daysUntilExam` / `archivedLeaves`）+ 2 个 action（`restoreArchived` / `clearLocalCache`）；`settleTask` 同步追加 `actionLogs` 让指标真实联动；`resetMock` 同步重置 `actionLogs`。
+- [x] **Mock 数据扩展**：`mockHeatmap` 5 天 → 35 天（覆盖 5 周）+ 新增 `mockActionLogs`（3 条客观刷题/泛读历史日志，驱动初始"刷题正确率 87%"）。
+- [x] **Playwright 验收升级到 65 项**：新增首页周历 3 + 统计页 18 + 我的页 17 + tabBar 5 共 33 项断言；新增 2 张截图（`7-profile-page` / `8-tabbar`）。修复 tabbar 隐藏后无法可见的脚本 bug，改用 `state: 'attached'` 并主动恢复 display。
+- [x] **PRD 文档同步**：[prd_final.md](prd_final.md) 末尾新增「五、v6.0 增量需求」章节（9 小节）。
+- [x] **验证全绿**：Playwright 65/65、`pnpm test` 10/10、`vue-tsc` 0 错误、`build:h5` + `build:mp-weixin` 双端通过。
+- [ ] 用户侧最终验收（待用户执行）：微信开发者工具导入 `apps/app/dist/build/mp-weixin` 真机走查 4 个 tab：今日（新周历）/ 知识树 / 统计（热力日历 + 4 指标 + 雷达图）/ 我的（用户卡 + 3 组设置 + 广告位）。预期：所有页面文案为大白话、按钮单色一体、tabBar 4 个项正常切换。

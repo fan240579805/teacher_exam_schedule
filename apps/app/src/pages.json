@@ -21,7 +21,13 @@
         {
             "path": "pages/dashboard/index",
             "style": {
-                "navigationBarTitleText": "仪表盘"
+                "navigationBarTitleText": "统计"
+            }
+        },
+        {
+            "path": "pages/profile/index",
+            "style": {
+                "navigationBarTitleText": "我的"
             }
         }
     ],
@@ -41,7 +47,11 @@
             },
             {
                 "pagePath": "pages/dashboard/index",
-                "text": "仪表盘"
+                "text": "统计"
+            },
+            {
+                "pagePath": "pages/profile/index",
+                "text": "我的"
             }
         ]
     },

@@ -5,13 +5,17 @@
                 <text class="eyebrow">{{ store.workspace.region }} · {{ store.workspace.subject }}</text>
                 <text class="title">{{ store.workspace.title }}</text>
             </view>
-            <button class="ghost-button" @click="store.resetMock">重置</button>
+            <button class="ghost-button" @click="store.resetMock">
+                <text class="ghost-icon">↻</text>
+                <text class="ghost-text">重置计划</text>
+            </button>
         </view>
 
         <view class="week-strip">
             <view v-for="day in weekDays" :key="day.label" class="week-day" :class="{ active: day.active }">
-                <text>{{ day.label }}</text>
-                <view class="dot" />
+                <text class="week-label">{{ day.label }}</text>
+                <text class="week-date">{{ day.dateNum }}</text>
+                <view class="week-dot" :class="{ checked: day.checked }" />
             </view>
         </view>
 
@@ -124,10 +128,26 @@ const checkinButtonText = computed(() => {
 
     return `今日任务进行中 (${store.todayProgressText})`;
 });
-const weekDays = ['一', '二', '三', '四', '五', '六', '日'].map((label, index) => ({
-    label,
-    active: index < 4
-}));
+const weekDays = computed(() => {
+    // 以「今天」为参考点，向前推到周一，生成一整周的日期。
+    // 表现与设计图一致：周几上方是中文、下方是日期数、底部是状态点；active 今日填充为主题色圆。
+    const labels = ['一', '二', '三', '四', '五', '六', '日'];
+    const today = new Date();
+    const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+    const monday = new Date(today.getTime() - (dayOfWeek - 1) * 86400000);
+    const checkinSet = new Set(store.dailyCheckins.map((item) => item.checkinDate));
+
+    return labels.map((label, index) => {
+        const date = new Date(monday.getTime() + index * 86400000);
+        const dateKey = date.toISOString().slice(0, 10);
+        return {
+            label,
+            dateNum: date.getDate(),
+            active: index === dayOfWeek - 1,
+            checked: checkinSet.has(dateKey)
+        };
+    });
+});
 
 function levelLabel(level: 'none' | 'watch' | 'amber' | 'red') {
     const map = { none: '', watch: '轻微偏移', amber: '需要调整', red: '偏移严重' } as const;
@@ -215,7 +235,23 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 }
 
 .hero {
-    gap: 24rpx;
+    gap: 16rpx;
+    align-items: flex-start;
+}
+
+.hero > view:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.title {
+    display: block;
+    margin-top: 8rpx;
+    color: #1f2933;
+    font-size: 40rpx;
+    font-weight: 800;
+    line-height: 1.25;
+    word-break: break-all;
 }
 
 .eyebrow,
@@ -227,12 +263,7 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
     font-size: 24rpx;
 }
 
-.title {
-    display: block;
-    margin-top: 8rpx;
-    font-size: 42rpx;
-    font-weight: 800;
-}
+/* 原 .title 已在 .hero block 里重新定义，这里占位避免重复 */
 
 .ghost-button,
 .primary-button {
@@ -256,21 +287,36 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 
 .ghost-button {
     flex-shrink: 0;
-    width: 144rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6rpx;
+    width: 188rpx;
     height: 64rpx;
     margin: 8rpx 0 0;
-    padding: 0;
-    border: 2rpx solid #0f766e !important;
+    padding: 0 16rpx;
+    border: none !important;
     background: transparent !important;
-    color: #0f766e !important;
+    color: #6b7280 !important;
     line-height: 60rpx;
     font-size: 26rpx;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .ghost-button::after {
     display: none;
     border: none;
+}
+
+.ghost-icon {
+    color: #6b7280;
+    font-size: 30rpx;
+    font-weight: 600;
+}
+
+.ghost-text {
+    color: #6b7280;
+    font-size: 26rpx;
 }
 
 .text-button {
@@ -288,28 +334,58 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 }
 
 .week-strip {
-    gap: 16rpx;
+    gap: 8rpx;
     margin: 32rpx 0;
+    padding: 0;
+    background: transparent;
 }
 
 .week-day {
     flex: 1;
-    padding: 20rpx 0;
-    border-radius: 28rpx;
-    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+    padding: 12rpx 0;
+    border-radius: 999rpx;
+    background: transparent;
     text-align: center;
 }
 
-.week-day.active .dot {
+.week-day.active {
+    background: #0f766e;
+}
+
+.week-label {
+    color: #1f2933;
+    font-size: 28rpx;
+    font-weight: 600;
+}
+
+.week-date {
+    color: #1f2933;
+    font-size: 30rpx;
+    font-weight: 700;
+}
+
+.week-day.active .week-label,
+.week-day.active .week-date {
+    color: #fff;
+}
+
+.week-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.week-dot.checked {
     background: #22c55e;
 }
 
-.dot {
-    width: 12rpx;
-    height: 12rpx;
-    margin: 10rpx auto 0;
-    border-radius: 50%;
-    background: #d1d5db;
+.week-day.active .week-dot.checked {
+    background: #fff;
 }
 
 .alert {

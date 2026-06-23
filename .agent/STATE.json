@@ -1,13 +1,13 @@
 {
     "project": "深教考通",
-    "phase": "P9.1-button-style-uni-button-reset",
-    "activeWork": "修复用户提交的 5 张真机截图反映的按钮渲染问题：① 首页打卡按钮未就绪态文字几乎不可读 + 就绪态出现「半绿半灰」渐变伪影；② sheet「标记完成」主题色按钮也呈现渐变；③ 打卡随笔弹窗关闭按钮 × 灰圆底未生效（光秃 ×）；④ 弹窗底部「以后再说/保存记录」按钮组渐变伪影。根因：uni-app H5 把 <button> 包成 <uni-button> 双层结构，外层 uni-button 自带 background:#f8f8f8 灰底，业务样式只作用在内层 button 上，造成上半业务色+下半默认灰的视觉撕裂。修复方式：App.vue 全局补 `uni-button,button{background:transparent;...}` + `uni-button[disabled]{background-color:transparent}` + `uni-button:after,button:after{display:none!important}` 三层 reset，业务样式加 !important 强制覆盖。",
+    "phase": "P10-tab3-tab4-week-strip-redesign",
+    "activeWork": "按用户 v6.0 需求交付（1）首页周历改为「中文星期 + 日期数字 + 已打卡圆点」三段式、重置按钮改为「↻ 重置计划」；（2）Tab 3 仪表盘改名为「统计」并重构为 5x7 热力日历 + 2x2 核心指标（完美达标天数/日均学习时长/已掌握考点/刷题正确率） + 最近随笔 + 各科进度 + 5 维雷达图；（3）新建 Tab 4「我的」页：用户卡片 + 倒计时 + 三组列表（复习计划/考点库/关于） + 广告位；（4）tabBar 扩为 4 个 tab（今日/知识树/统计/我的）；（5）Pinia store 新增 actionLogs/dailyTaskCapHours/cloudSyncStatus + 7 个联动 computed + restoreArchived/clearLocalCache 2 个 action；（6）mockHeatmap 扩充到 35 天 + 新增 mockActionLogs；（7）Playwright 验收脚本从 32 项扩到 65 项。",
     "recentValidation": {
-        "playwrightAssertions": "32/32 通过（在 P9 的 24 项基础上新增 8 项按钮 computed style 断言）",
-        "visualScreenshots": "6 张关键截图目视确认无渐变伪影：1-home-default、2-dashboard-initial、3-home-after-settle、4-dashboard-after-settle、5-sheet-primary-button、6-checkin-modal",
+        "playwrightAssertions": "65/65 通过（在 P9.1 的 32 项基础上新增 33 项：首页周历 3 + 统计页文案 9 + 热力日历 1 + 2x2 指标 1 + 初值 0/14 1 + 雷达 2 + 我的页 17）",
+        "visualScreenshots": "8 张关键截图目视确认：1-home-default（新周历 + 重置计划）、2-dashboard-initial（热力日历 + 2x2 指标 + 雷达）、3-home-after-settle、4-dashboard-after-settle、5-sheet-primary-button、6-checkin-modal、7-profile-page（我的页完整）、8-tabbar（4 个 tab）",
         "unitTests": "vitest 10/10 通过",
         "typeCheck": "vue-tsc 0 错误",
-        "build": "build:h5 + build:mp-weixin 双端通过；mp-weixin 产物 app.wxss 完整保留 uni-button/button 双重 reset，小程序端兼容"
+        "build": "build:h5 + build:mp-weixin 双端通过"
     },
     "activeWorktree": "main",
     "blocked": [],
@@ -16,23 +16,26 @@
         "technicalTerms": "文件名、表名、函数名、命令名、包名可以保留英文原文，但解释文字必须使用中文。"
     },
     "devNotes": [
-        "新增/改动 workspace 包（@teacher-exam/core、@teacher-exam/types）的导出后，必须重启 dev:h5 或删除 apps/app/node_modules/.vite 缓存，否则 Vite 预打包缓存仍是旧版本，运行时会报 does not provide an export named ...。",
-        "uni-app 微信小程序 AppID 必须填在 manifest.json 的 mp-weixin.appid，不能填在顶层 appid（顶层 appid 是 5+App 的 __UNI__ 标识）；填错会导致编译产物 project.config.json 无 AppID，真机运行时不注入 __wxAppCode__，抛 ReferenceError。",
-        "微信开发者工具导入 uni-app 项目时，必须导入构建产物目录 apps/app/dist/dev/mp-weixin（或 dist/build/mp-weixin），不能导入源码目录 apps/app。",
-        "uni-app H5 端 <button> 必须按双层结构 reset：外层 uni-button + 内层 button + 内层 :after 伪元素，三层全部 background:transparent + border:0 + ::after display:none，否则会出现「半业务色半灰」的渐变伪影。`button[disabled]` 也必须显式声明 background-color:transparent，因为 uni-button 默认有 disabled 灰色态。所有业务按钮的背景色和文字色都需要加 !important 来覆盖 uni-button 默认样式（因为 uni-button 是元素选择器，业务类是 class 选择器，但 uni-button 默认样式由 uni-app 注入到 :host 上下文，不加 !important 会被覆盖）。",
-        "PRD §四 Tab3 「Burndown Charts」严格定义为「以 L2 层级为基准的横向闭环进度百分比条」。仪表盘按 L2 节点遍历，store.moduleBurndown 是 computed，与 nodes 状态自动联动，迁移到 Supabase 时只需把 mockNodes 替换为 client.from('knowledge_nodes').select() 即可。",
-        "resetMock 必须用 JSON.parse(JSON.stringify(...)) 深拷贝 mock 字面量，否则一次 settleTask 会污染下次 reset 的初始数据。",
-        "Playwright 在 H5 build 产物里点击底部按钮（sheet 取消、modal 保存）时会被 uni-tabbar 的 fixed 容器拦截 pointer events，必须先用 page.evaluate 隐藏 uni-tabbar.uni-tabbar-bottom；不能用 force click，因为 force 会跳过 vue 事件冒泡，导致 sheet-mask 的 @click=\"closeSheet\" 不会触发，反而后续断言失败。"
+        "新增/改动 workspace 包（@teacher-exam/core、@teacher-exam/types）的导出后，必须重启 dev:h5 或删除 apps/app/node_modules/.vite 缓存。",
+        "uni-app 微信小程序 AppID 必须填在 manifest.json 的 mp-weixin.appid，不能填在顶层 appid。",
+        "微信开发者工具导入 uni-app 项目时，必须导入构建产物目录 apps/app/dist/dev/mp-weixin（或 dist/build/mp-weixin）。",
+        "uni-app H5 端 <button> 必须按双层结构 reset：外层 uni-button + 内层 button + 内层 :after 伪元素，三层全部 background:transparent + border:0 + ::after display:none，否则会出现「半业务色半灰」的渐变伪影。业务按钮背景/字色加 !important 覆盖默认。",
+        "PRD §四 Tab3 「Burndown Charts」严格定义为「以 L2 层级为基准的横向闭环进度百分比条」。store.moduleBurndown computed 与 nodes 状态自动联动。",
+        "resetMock 必须用 JSON.parse(JSON.stringify(...)) 深拷贝 mock 字面量，否则一次 settleTask 会污染下次 reset。",
+        "Playwright 在 H5 build 产物里点击底部按钮会被 uni-tabbar 拦截，必须先用 page.evaluate 隐藏 uni-tabbar.uni-tabbar-bottom；不能用 force click，会跳过 vue 事件冒泡。但后续验收 tabbar 本身时要记得在 evaluate 中设回 display=''。",
+        "首页周历 .week-day 应为「中文星期 + 日期数字 + 圆点」三段布局；weekDays 是 computed，以「今天」为参考点回退到周一连续 7 天，结合 store.dailyCheckins 的 checkinDate 集合判定“是否已打卡”。",
+        "Tab 3 「统计」页雷达图用纯 CSS clip-path: polygon 实现，不依赖 echarts/ucharts，三层同心圆背景 + 5 条轴线 + 中心 50%/50% 取点。需要的 5 个分数从 store.interviewRadar 读取，迁移 Supabase 只需替换 computed 源。",
+        "Tab 4 「我的」页面 mock 样式列表是纯 <view> 实现，未依赖 uni-list/uni-list-item 组件，避免额外包含 uni 库；报名反馈等用 uni.showModal/uni.showActionSheet。后续接入真实页面可跳转同序升级为路由类 page。"
     ],
     "secretsPolicy": {
         "storeRealSecrets": false,
         "notes": "微信小程序 AppID 不属于密钥可入库；appsecret、Supabase service_role key 严禁提交，客户端严禁 service_role。"
     },
     "validationStrategy": {
-        "primary": "harness/playwright-verify.mjs 跑 chromium + 静态服务器对 H5 build 产物做 32 项断言（文案 5 + 结构 8 + 视觉 4 + 联动 3 + 按钮 computed style 8 + sheet 主按钮 2 + modal 关闭/底部按钮 5 + 残留 3）+ getComputedStyle 严格匹配 RGB 值，落 6 张关键截图到 harness/verify-shots/。",
+        "primary": "harness/playwright-verify.mjs 跑 chromium + 静态服务器对 H5 build 产物做 65 项断言（首页 11 + 统计页 18 + 联动 3 + 按钮样式 13 + 我的页 17 + tabBar 5）。",
         "secondary": "pnpm test（10 条核心单测）、pnpm --filter @teacher-exam/app run type-check、pnpm build:h5、pnpm build:mp-weixin。",
         "legacy": "harness/html-preview 本地 HTML + mock 数据仍可用作零依赖快速预览。"
     },
-    "nextImmediateAction": "等待用户在微信开发者工具中导入 `apps/app/dist/build/mp-weixin` 真机走查三处画面：①首页底部打卡按钮（未就绪+就绪两态）；②sheet「标记完成」主按钮；③打卡随笔弹窗关闭按钮 × 与底部「以后再说/保存记录」按钮组。预期表现：所有按钮单色一体填充、无渐变/双色撕裂、无 1rpx 灰描边。后续可做：思维导图节点拖拽排序、books/book_nodes 接入真实 Supabase 读写、把面试规范检查单接到真实 interview_checklist_items 表。",
-    "updatedAt": "2026-06-24T01:50:00+08:00"
+    "nextImmediateAction": "等待用户在微信开发者工具中导入 `apps/app/dist/build/mp-weixin` 真机走查 4 个 tab：今日（新周历）、知识树、统计（热力日历 + 4 个指标 + 雷达图）、我的（用户卡 + 3 组设置 + 广告位）。后续可做：思维导图节点拖拽、books/book_nodes 接入真实 supabase、面试雷达接入 interview_runs 表、广告位接入 <ad> 组件。",
+    "updatedAt": "2026-06-24T02:10:00+08:00"
 }

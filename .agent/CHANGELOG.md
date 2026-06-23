@@ -2,6 +2,91 @@
 
 ## 2026-06-24
 
+### P10 Tab 3「统计」/ Tab 4「我的」独立架构 + 首页周历改版（v6.0）
+
+按用户提交的 v6.0 需求文档（`prd_final.md` §五已同步收录）落地三块改造：① 首页周历改造为「中文星期 + 日期数字 + 已打卡圆点」三段式（与设计图一致）；② 仪表盘改名为「统计」并按 PRD §一·1 的多巴胺逻辑彻底重构（5x7 热力日历 / 2x2 核心指标 / 最近随笔 / 各科进度 / 五维雷达）；③ 新建 Tab 4「我的」页（用户卡 / 倒计时 / 三组列表 / 广告位）。
+
+#### 一、首页周历 + 重置按钮改版
+
+[apps/app/src/pages/index/index.vue](apps/app/src/pages/index/index.vue)：
+
+- **周历**：DOM 结构由 `.dot` 改为三段式 `.week-day > {.week-label, .week-date, .week-dot}`；普通日透明背景 + 深灰文字，当日填充主题色 `#0f766e` 圆形 + 白字，已打卡日下方绿色圆点 `#22c55e`。
+- **数据**：`weekDays` 从静态数组改为 `computed`，以「今天」为基准回退到本周一连续 7 天，结合 `store.dailyCheckins` 的 checkinDate 集合判定 `checked`。
+- **重置按钮**：文案从「重置」改为「↻ 重置计划」，样式由"主题色描边"改为"透明底中灰字"的弱化按钮，与 hero 标题同行右对齐；`.hero` 改 `flex-start` 让长标题和按钮一行排齐。
+
+#### 二、Tab 3「统计」页（[apps/app/src/pages/dashboard/index.vue](apps/app/src/pages/dashboard/index.vue) 整体重写）
+
+按 v6.0 需求自上而下拆 5 块：
+
+1. **打卡日历 `<HeatmapCalendar />`**：5 行 x 7 列 = 35 格热力网格，4 档颜色 + ⭐/▣ 角标徽章（当日有随笔/有照片）+ 底部图例条。
+2. **核心数据概览 `<DataOverviewGrid />`**：2x2 grid 渲染 4 张指标卡，严格使用「完美达标天数 / 日均学习时长 / 已掌握考点 / 刷题正确率」文案。
+3. **最近打卡随笔 `<RecentMemosList />`**：纵向 3 张卡，每张 = 日期 + 已坚持 N 天 + memo 全文 + 1:1 图片占位。
+4. **各科通关进度 `<ModuleProgressBars />`**：复用 `store.moduleBurndown`，文案统一为 `{percent}% （掌握 {done}/{total} 考点）`。
+5. **面试能力雷达 `<InterviewRadarChart />`**：纯 CSS `clip-path: polygon(...)` 实现五维雷达（时间把控/语言流畅/板书完整/教态/逻辑框架），三层同心圆背景 + 5 条径向轴线，不依赖 echarts/ucharts。
+
+#### 三、Tab 4「我的」页（[apps/app/src/pages/profile/index.vue](apps/app/src/pages/profile/index.vue) 新建）
+
+- **用户卡**：圆形主题色头像（取昵称首字"考"）+ 昵称 + 当前 workspace 标题 + 同步状态（绿点"云端数据已同步"/橙点"离线数据待上传"）。
+- **倒计时卡**：`#ecfdf5` 浅绿底 + 大号主题色数字（68 天）+ 考试日期。
+- **Group 1 复习计划管理**：当前备考目标（拉 ActionSheet）/ 倒计时与时间分配（modal 占位）/ 每日任务上限提醒（⊖/⊕ 调节器，绑定 `store.dailyTaskCapHours`，区间 2-12）。
+- **Group 2 考点库管理**：暂不复习考点库（空态展示 + 单条恢复 + 一键全部恢复）/ 本地日志清理（红字 Danger，二次确认后调用 `store.clearLocalCache()`）。
+- **预留广告位**：200rpx 高度虚线灰底，居中文案"[ 预留广告位 / Ad Slot ]"，后期接入腾讯广点通时把内容替换为 `<ad>` 即可。
+- **Group 3 关于与帮助**：问题反馈 / 关于深教考通 v1.0.0。
+- **底部说明**：浅灰小字"本应用仅作为备考进度追踪工具，不内置题库、不内置网课"，呼应 PRD §〇 红线。
+
+#### 四、tabBar 升级为 4 tab
+
+[apps/app/src/pages.json](apps/app/src/pages.json)：
+
+- 新增 `pages/profile/index` 注册（标题"我的"）；
+- dashboard 标题由"仪表盘"改为"统计"；
+- tabBar list 加第 4 项"我的"（pagePath: pages/profile/index）。
+
+#### 五、Pinia store 扩展
+
+[apps/app/src/stores/study.ts](apps/app/src/stores/study.ts)：
+
+- 新增 ref：`actionLogs: StudyLog[]`、`dailyTaskCapHours`、`cloudSyncStatus`；
+- 新增 7 个 computed：`perfectDays` / `avgStudyHours` / `masteredCount` / `totalLeafCount` / `objectiveAccuracy` / `interviewRadar` / `daysUntilExam` / `archivedLeaves`；
+- 新增 2 个 action：`restoreArchived(nodeId?)` 单条/全部恢复回收站考点；`clearLocalCache()` 清 Storage + resetMock；
+- `settleTask` 同步追加 `actionLogs`，让"刷题正确率/日均学习时长"指标随业务真实联动；
+- `resetMock` 同步重置 `actionLogs`。
+
+#### 六、Mock 数据扩展
+
+[apps/app/src/data/mock.ts](apps/app/src/data/mock.ts)：
+
+- `mockHeatmap` 由 5 天扩到 35 天（覆盖 5 周，工作日 90~210min/周末有低谷与断签，更接近真实备考节奏）；
+- 新增 `mockActionLogs: StudyLog[]`（3 条历史结算，驱动初始"刷题正确率 87%"）；
+- import 加 `StudyLog`。
+
+#### 七、Playwright 验收升级（32 → 65）
+
+[harness/playwright-verify.mjs](harness/playwright-verify.mjs)：在原 32 项基础上新增 33 项断言：
+
+- **首页周历 3 项**：7 天 + 日期数字必现、重置按钮文案"重置计划"、透明底；
+- **统计页 18 项**：标题"深教考通 · 我的统计"、9 个核心文案、35 格热力、4 张指标卡、"0/14"初值、3 条模块、5 条雷达轴、1 个 polygon；
+- **我的页 17 项**：用户卡 / 同步状态 / 倒计时 / 3 组列表 / 14 个具体列表项 / 倒计时数字 > 0 / 头像主题色 / 广告位渲染；
+- **tabBar 5 项**：4 个 tab 标签精确匹配。
+
+新增 2 张截图：`7-profile-page.png`（我的页全貌）、`8-tabbar.png`（tabBar）。
+
+修复脚本 1 处 bug：之前 `page.evaluate` 隐藏 tabbar 后，最后做 tabBar 验收时它仍 hidden，需改用 `state: 'attached'` 并主动 `tab.style.display = ''` 恢复。
+
+#### 八、PRD 文档同步
+
+[prd_final.md](prd_final.md) 末尾新增「五、v6.0 增量需求」章节，9 个小节完整收录：总体调整 / 周历改版 / 重置按钮 / Tab3 / Tab4 / store 扩展 / mock 扩展 / Playwright 65 项 / 验证全绿命令清单 / 后续路线图。
+
+#### 验证全绿
+
+- Playwright **65/65 通过**；
+- `pnpm test` 10/10 通过；
+- `vue-tsc --noEmit` 0 错误；
+- `build:h5` + `build:mp-weixin` 双端通过；
+- 视觉复核 8 张截图（首页/统计页/我的页/sheet/modal/tabbar）全部符合设计。
+
+## 2026-06-24
+
 ### P9.1 真机截图反馈：按钮渐变伪影、关闭按钮灰圆底未生效修复
 
 用户提交 5 张真机截图，反映以下按钮样式问题：
