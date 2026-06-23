@@ -109,3 +109,19 @@
 - [x] 装 `playwright` 1.61.0 至 root devDependencies，`npx playwright install chromium` 下载本地浏览器内核。
 - [x] 验证全绿：`pnpm test`（10 条单测）、`pnpm type-check`、`pnpm build:h5`、`pnpm build:mp-weixin`、Playwright 24/24。
 - [ ] 用户侧最终验收（待用户执行）：微信开发者工具导入 `apps/app/dist/build/mp-weixin` 真机走查首页、仪表盘、打卡弹窗三个画面；连续完成 2 个任务确认对应 L2 模块燃尽 0→2 平滑递增。
+
+## P9.1 真机截图按钮渐变伪影修复
+
+针对用户提交的 5 张真机截图反馈：①未就绪打卡按钮文字不可读；②就绪态打卡按钮渐变伪影；③sheet 标记完成按钮渐变；④Modal 关闭按钮 × 灰圆底未生效；⑤Modal 底部按钮组渐变。根因：uni-app H5 双层 button 结构外层 uni-button 默认灰底未被重置。
+
+- [x] App.vue 全局新增三层 button reset：`uni-button,button{background:transparent;...}` + `[disabled]{background-color:transparent}` + `:after{display:none!important}`。
+- [x] 首页 `.primary-button` / `.ghost-button` / `.text-button` / `.checkin-button` 全部加 `!important` 强制覆盖 uni-button 默认样式。
+- [x] 首页打卡按钮未就绪态字色从浅灰 `#9ca3af` 升级为中灰 `#4b5563`、底色从 `#e5e7eb` 加深到 `#d1d5db` 以保证可读。
+- [x] 打卡按钮加 `[disabled]{opacity:1}` 防止 uni-app 把 disabled 按钮压暗。
+- [x] DailyCheckinModal `.close-button` `.later-button` `.save-button` 全部加 `!important` 与 `::after{display:none}` reset。
+- [x] Playwright 验收脚本升级到 **32 项断言**：新增 8 项 `getComputedStyle` 严格 RGB 匹配（打卡按钮可读色、结算主按钮主题色、Modal 关闭/保存/以后再说三按钮各自背景与字色）。
+- [x] Playwright 脚本通过 `page.evaluate` 隐藏 `uni-tabbar.uni-tabbar-bottom` 解决 fixed tabbar 拦截 sheet 底部按钮 click 的问题（不能用 force click，会跳过 vue 事件冒泡）。
+- [x] 截图复核 6 张：1-home-default（未就绪打卡按钮单色）、5-sheet-primary-button（标记完成单色）、6-checkin-modal（关闭按钮圆底 + 底部单色）目视确认无渐变。
+- [x] 验证全绿：Playwright 32/32、`pnpm test` 10/10、`vue-tsc` 0 错误、`build:h5` + `build:mp-weixin` OK。
+- [x] mp-weixin 产物 `app.wxss` 确认完整保留 button 双重 reset，小程序端兼容。
+- [ ] 用户侧最终验收（待用户执行）：微信开发者工具导入 `apps/app/dist/build/mp-weixin` 真机走查三处按钮：①首页底部打卡按钮（未就绪+就绪两态）；②sheet 标记完成主按钮；③打卡随笔弹窗 × 与底部「以后再说/保存记录」按钮组。预期：所有按钮单色一体填充、无渐变/双色、无 1rpx 灰描边。

@@ -2,6 +2,98 @@
 
 ## 2026-06-24
 
+### P9.1 真机截图反馈：按钮渐变伪影、关闭按钮灰圆底未生效修复
+
+用户提交 5 张真机截图，反映以下按钮样式问题：
+
+1. 首页打卡按钮未就绪态（"今日任务进行中 (X/Y)"）文字几乎不可读，灰底也太浅；
+2. 首页打卡按钮就绪态（"今日任务已完成 · 去写随笔"）出现「上半绿、下半灰」的渐变/双色伪影；
+3. sheet 弹层「标记完成」主题色按钮也呈现同样的渐变伪影；
+4. 打卡随笔弹窗右上角关闭按钮 × 灰圆底完全未生效，渲染成光秃秃的 ×；
+5. 打卡随笔弹窗底部「以后再说 / 保存记录」按钮组同样存在渐变伪影。
+
+#### 根因定位
+
+uni-app H5 端会把 `<button>` 包装成 `<uni-button>` 双层结构：
+
+- 外层 `uni-button` 是 uni-app 注入的自定义元素，**自带 `background-color: #f8f8f8`** 灰底默认样式；
+- 内层 `<button>` 才是业务样式生效的目标。
+
+我们之前只对内层 `button` 的 class 设置 `background: #0f766e`，外层 `uni-button` 仍保留默认灰底，于是渲染出"上半业务色 + 下半默认灰"的渐变撕裂。同时 `uni-button[disabled]` 还有更深一层的 `background-color` 灰态覆盖，导致打卡按钮 disabled 时颜色更难调控。`<button>::after` 还有 1rpx 描边伪元素，原本只在小程序端出现，但 uni-app H5 把这条规则也下发了。
+
+#### 修复方案
+
+**1. `apps/app/src/App.vue` 全局三层 reset**
+
+```css
+uni-button,
+button {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+    line-height: normal;
+    text-align: center;
+}
+
+uni-button::after,
+button::after {
+    display: none !important;
+    border: none !important;
+}
+
+uni-button[disabled],
+button[disabled] {
+    color: inherit;
+    background-color: transparent;
+}
+```
+
+把外层 uni-button、内层 button、内层 ::after 三层默认样式全部重置为透明，业务样式才能直接生效。
+
+**2. 业务按钮加 `!important` 强制覆盖**
+
+由于 `uni-button` 是元素选择器、业务样式是 class 选择器，但 uni-app 把 uni-button 默认样式注入到 `:host` 上下文中，不加 `!important` 仍会被覆盖。所有需要显式背景色/字色的业务按钮统一加 `!important`：
+
+- [apps/app/src/pages/index/index.vue](apps/app/src/pages/index/index.vue)：
+  - `.primary-button`：宽度 100%、高度 88rpx、`background: #0f766e !important`、`color: #fff !important`、`line-height: 88rpx`、`font-weight: 700`，并加 `::after { display: none }`。
+  - `.ghost-button`（重置）：保留透明底+主题色描边，三色全加 `!important`。
+  - `.text-button`（取消）：宽度 100%、`background: transparent !important`、`color: #6b7280 !important`、`line-height: 72rpx`，加 `::after { display: none }`。
+  - `.checkin-button`：宽度 100%、未就绪态 `background: #d1d5db !important` + `color: #4b5563 !important`（之前是 `#e5e7eb` + `#9ca3af` 太浅不可读），就绪态 `.ready` 加 `!important` 覆盖；`[disabled]` 显式 `opacity: 1` 防 uni-app 把 disabled 按钮压暗；`line-height: 52px` 让文字垂直居中。
+  - 把原先泛用的 `.text-button` 选择器改为 `.sheet .text-button` 以避免影响 modal 结构。
+- [apps/app/src/components/DailyCheckinModal.vue](apps/app/src/components/DailyCheckinModal.vue)：
+  - `.close-button`：`background: #f3f4f6 !important` + `color: #6b7280 !important`、`flex-shrink: 0`、加 `::after { display: none }`，灰圆底彻底生效。
+  - `.later-button` / `.save-button`：分别加 `!important` 锁定背景色和字色，`padding: 0` + `line-height: 88rpx` 让 88rpx 高度内文字正中，`::after { display: none }` 杜绝 1rpx 描边。
+
+#### Playwright 验收升级（24 → 32 项）
+
+[harness/playwright-verify.mjs](harness/playwright-verify.mjs) 在原 24 项基础上新增 8 项 `getComputedStyle` 严格 RGB 匹配断言：
+
+- 打卡按钮文字色可读：期望 `rgb(75, 85, 99)`（中灰）或 `rgb(255, 255, 255)`（白）；
+- 结算面板主按钮：背景 `rgb(15, 118, 110)` 主题色实心 + 文字 `rgb(255, 255, 255)` 白；
+- Modal 关闭按钮：背景 `rgb(243, 244, 246)` 浅灰圆底 + 文字 `rgb(107, 114, 128)` 中灰；
+- Modal 保存按钮：背景 `rgb(15, 118, 110)` + 文字 `rgb(255, 255, 255)`；
+- Modal 以后再说按钮：背景 `rgb(243, 244, 246)`。
+
+为了让 Playwright 能在循环结算 6 个 task 后打开真正的 modal，需要在脚本里 `page.evaluate(() => document.querySelector('uni-tabbar.uni-tabbar-bottom').style.display = 'none')` 临时隐藏 fixed tabbar，否则它会拦截 sheet 底部按钮的 click。**绝不能用 force click**，因为 force 会跳过 vue 事件冒泡，导致 `sheet-mask` 的 `@click="closeSheet"` 不触发，sheet-mask 残留在 DOM 上拦截后续点击。
+
+最终落 6 张关键截图到 [harness/verify-shots/](harness/verify-shots/)：
+- 1-home-default：未就绪打卡按钮单色一体灰底；
+- 5-sheet-primary-button：标记完成按钮单色主题色实心；
+- 6-checkin-modal：关闭按钮圆形灰底 + 底部按钮组单色一体。
+
+#### 验证全绿
+
+- Playwright **32/32 通过**；
+- `pnpm test` 10/10 通过；
+- `pnpm --filter @teacher-exam/app run type-check` 0 错误；
+- `pnpm build:h5` OK；
+- `pnpm build:mp-weixin` OK，`apps/app/dist/build/mp-weixin/app.wxss` 完整保留 `uni-button,button{...}` + `:after{display:none!important}` + `[disabled]{background-color:transparent}` 三层 reset，小程序端样式同步生效。
+
+## 2026-06-24
+
 ### P9 文案去 AI 化、按钮 UI 一致性修复、模块燃尽按 L2 重构
 
 - 文案去 AI 化（mock 数据 + 全 UI 文案）：

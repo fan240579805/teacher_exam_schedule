@@ -237,12 +237,21 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 .ghost-button,
 .primary-button {
     border-radius: 999rpx;
-    font-size: 26rpx;
+    font-size: 28rpx;
 }
 
 .primary-button {
-    background: #0f766e;
-    color: #fff;
+    width: 100%;
+    height: 88rpx;
+    background: #0f766e !important;
+    color: #fff !important;
+    line-height: 88rpx;
+    font-weight: 700;
+}
+
+.primary-button::after {
+    display: none;
+    border: none;
 }
 
 .ghost-button {
@@ -251,12 +260,31 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
     height: 64rpx;
     margin: 8rpx 0 0;
     padding: 0;
-    border: 2rpx solid #0f766e;
-    background: transparent;
-    color: #0f766e;
+    border: 2rpx solid #0f766e !important;
+    background: transparent !important;
+    color: #0f766e !important;
     line-height: 60rpx;
     font-size: 26rpx;
     font-weight: 600;
+}
+
+.ghost-button::after {
+    display: none;
+    border: none;
+}
+
+.text-button {
+    width: 100%;
+    height: 72rpx;
+    background: transparent !important;
+    color: #6b7280 !important;
+    font-size: 26rpx;
+    line-height: 72rpx;
+}
+
+.text-button::after {
+    display: none;
+    border: none;
 }
 
 .week-strip {
@@ -378,14 +406,12 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
     flex: 1;
 }
 
-.primary-button {
+.sheet .primary-button {
     margin-top: 20rpx;
 }
 
-.text-button {
+.sheet .text-button {
     margin-top: 12rpx;
-    background: transparent;
-    color: #6b7280;
 }
 
 .checkin-bar {
@@ -399,17 +425,29 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 }
 
 .checkin-button {
+    width: 100%;
     min-height: 52px;
+    padding: 0;
     border: none;
     border-radius: 999rpx;
-    background: #e5e7eb;
-    color: #9ca3af;
+    background: #d1d5db !important;
+    color: #4b5563 !important;
     font-size: 16px;
-    font-weight: 800;
+    font-weight: 700;
+    line-height: 52px;
 }
 
 .checkin-button.ready {
-    background: #0f766e;
-    color: #fff;
+    background: #0f766e !important;
+    color: #fff !important;
+}
+
+.checkin-button[disabled] {
+    opacity: 1;
+}
+
+.checkin-button::after {
+    display: none;
+    border: none;
 }
 </style>

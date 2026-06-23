@@ -148,6 +148,13 @@ function expect(label, cond, detail = '') {
         await page.goto(`http://127.0.0.1:${port}/#/pages/index/index`);
         await page.waitForSelector('.task-card', { timeout: 15000 });
         await page.waitForTimeout(500);
+        // H5 build 中底部 tabbar 是 fixed 定位，会在视口高度受限时遮挡 sheet 底部按钮，
+        // 临时隐藏 tabbar 让所有 click 都正常触发原生事件流（不能用 force，会跳过 vue 事件冒泡）。
+        await page.evaluate(() => {
+            const tab = document.querySelector('uni-tabbar.uni-tabbar-bottom');
+            if (tab) tab.style.display = 'none';
+        });
+        await page.waitForTimeout(200);
 
         // 记录结算前任务标题集合，用于后续判断集合变化
         const titlesBefore = await page.locator('.task-card .task-title').allTextContents();
@@ -196,6 +203,105 @@ function expect(label, cond, detail = '') {
         // 模拟在浏览器内联强行打开 Modal 子组件较复杂，这里改为校验底部按钮文案与样式
         const checkinText = await page.locator('.checkin-button').textContent();
         expect('打卡按钮文案不再使用「高保真执行」', !(checkinText || '').includes('高保真执行'));
+
+        // ====== 4.1 打卡按钮灰态文字可读 ======
+        const checkinTextColor = await page.locator('.checkin-button').evaluate((el) => getComputedStyle(el).color);
+        // 期望 #4b5563 = rgb(75, 85, 99) 或主色 rgb(255, 255, 255)（ready 态）
+        const readable = /75, 85, 99|255, 255, 255/.test(checkinTextColor);
+        expect('打卡按钮文字色可读（中灰或白）', readable, `color=${checkinTextColor}`);
+
+        // ====== 4.2 sheet 主题色按钮实心 ======
+        // 在结算面板里点开第一张卡看主按钮
+        await page.waitForSelector('.task-card', { timeout: 5000 });
+        await page.locator('.task-card').first().click();
+        await page.waitForSelector('.sheet .primary-button', { timeout: 5000 });
+        const primaryBg = await page.locator('.sheet .primary-button').evaluate((el) => getComputedStyle(el).backgroundColor);
+        const primaryColor = await page.locator('.sheet .primary-button').evaluate((el) => getComputedStyle(el).color);
+        expect('结算面板主按钮：主题色实心底', primaryBg.includes('15, 118, 110'), `bg=${primaryBg}`);
+        expect('结算面板主按钮：白色字', primaryColor.includes('255, 255, 255'), `color=${primaryColor}`);
+        await page.screenshot({ path: path.join(SHOTS_DIR, '5-sheet-primary-button.png'), fullPage: false });
+
+        // 关闭 sheet
+        await page.locator('.text-button').click();
+        await page.waitForTimeout(300);
+
+        // ====== 4.3 DailyCheckinModal 关闭按钮 + 底部按钮组样式 ======
+        // 通过完成所有任务的方式比较麻烦，这里用 JS 手工挂载 modal DOM 测试样式不现实，
+        // 改为：调用 store.settleAll 方式不存在，因此通过 evaluate 强制触发 modal 显示
+        // 简化：直接断言「以后再说 / 保存记录 / 关闭按钮 ×」的样式可在源 CSS 中通过类名查到生效。
+        // 我们注入一段 HTML 模拟 modal 结构，然后取 computed style。
+        await page.evaluate(() => {
+            const wrap = document.createElement('div');
+            wrap.id = '__verify_modal_probe__';
+            wrap.innerHTML = `
+                <div class="modal-mask">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <button class="close-button">×</button>
+                        </div>
+                        <div class="footer">
+                            <button class="later-button">以后再说</button>
+                            <button class="save-button">保存记录</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(wrap);
+        });
+        await page.waitForTimeout(200);
+        // 注：这是 DOM 注入，不会带 scoped 类，仅做语义占位；真正断言走 modal 加载后的 selector。
+        // 这里先清掉，避免影响后续。
+        await page.evaluate(() => {
+            const probe = document.getElementById('__verify_modal_probe__');
+            if (probe) probe.remove();
+        });
+
+        // 强制让 store.todayTasks=[] 来触发 ready 态打卡按钮 -> 点开真正的 modal
+        // 通过反复结算 sheet 来清空：上面已经结算 1 个，但 6 个任务太多。
+        // 这里用更直接的方式：调用 vue 组件实例上的 saveDailyCheckin 跳过太复杂；改为人工把 todayTasks 全部 click。
+        // 实际验收中 modal 截图也会落到 6-modal.png
+        // 由于循环结算耗时长，我们直接在 store 上把所有 leaf 标记为 mastered：
+        await page.evaluate(() => {
+            // 仅占位：实际通过循环点击 task-card 完成所有任务来触发打卡按钮 ready 态
+        });
+
+        await page.goto(`http://127.0.0.1:${port}/#/pages/index/index`);
+        await page.waitForSelector('.task-card', { timeout: 5000 });
+        // H5 build 中底部 tabbar 是 fixed 定位，会遮挡任务卡片末尾和 sheet 底部按钮，
+        // 临时隐藏 tabbar 避免点击穿透到 tab 切换。
+        await page.evaluate(() => {
+            const tab = document.querySelector('uni-tabbar.uni-tabbar-bottom');
+            if (tab) tab.style.display = 'none';
+        });
+        await page.waitForTimeout(200);
+        // 把所有任务都结算掉
+        let safety = 30;
+        while (safety-- > 0) {
+            const cnt = await page.locator('.task-card').count();
+            if (cnt === 0) break;
+            await page.locator('.task-card').first().click();
+            await page.waitForSelector('.sheet .primary-button', { timeout: 5000 });
+            await page.locator('.sheet .primary-button').click();
+            await page.waitForTimeout(300);
+        }
+        // 此时 checkin 按钮应为 ready，点击打开 modal
+        await page.waitForSelector('.checkin-button.ready', { timeout: 5000 });
+        await page.locator('.checkin-button').click();
+        await page.waitForSelector('.close-button', { timeout: 5000 });
+
+        const closeBg = await page.locator('.close-button').evaluate((el) => getComputedStyle(el).backgroundColor);
+        const closeColor = await page.locator('.close-button').evaluate((el) => getComputedStyle(el).color);
+        expect('Modal 关闭按钮：浅灰圆底（#f3f4f6）', /243, 244, 246/.test(closeBg), `bg=${closeBg}`);
+        expect('Modal 关闭按钮：中灰字（#6b7280）', /107, 114, 128/.test(closeColor), `color=${closeColor}`);
+
+        const saveBg = await page.locator('.save-button').evaluate((el) => getComputedStyle(el).backgroundColor);
+        const saveColor = await page.locator('.save-button').evaluate((el) => getComputedStyle(el).color);
+        expect('Modal 保存按钮：主题色实心', /15, 118, 110/.test(saveBg), `bg=${saveBg}`);
+        expect('Modal 保存按钮：白色字', /255, 255, 255/.test(saveColor), `color=${saveColor}`);
+
+        const laterBg = await page.locator('.later-button').evaluate((el) => getComputedStyle(el).backgroundColor);
+        expect('Modal 以后再说按钮：浅灰底（#f3f4f6）', /243, 244, 246/.test(laterBg), `bg=${laterBg}`);
+
+        await page.screenshot({ path: path.join(SHOTS_DIR, '6-checkin-modal.png'), fullPage: false });
 
         // ====== 总结 ======
         const passed = assertions.filter((a) => a.ok).length;

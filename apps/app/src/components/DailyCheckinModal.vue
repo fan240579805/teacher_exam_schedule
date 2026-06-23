@@ -104,19 +104,21 @@ function submit() {
 }
 
 .close-button {
+    flex-shrink: 0;
     width: 64rpx;
     height: 64rpx;
     padding: 0;
     border: none;
     border-radius: 50%;
-    background: #f3f4f6;
-    color: #6b7280;
+    background: #f3f4f6 !important;
+    color: #6b7280 !important;
     font-size: 36rpx;
     line-height: 64rpx;
     text-align: center;
 }
 
 .close-button::after {
+    display: none;
     border: none;
 }
 
@@ -184,23 +186,27 @@ function submit() {
 .save-button {
     flex: 1;
     min-height: 88rpx;
+    padding: 0;
     border: none;
     border-radius: 999rpx;
     font-size: 28rpx;
+    line-height: 88rpx;
+    font-weight: 600;
 }
 
 .later-button::after,
 .save-button::after {
+    display: none;
     border: none;
 }
 
 .later-button {
-    background: #f3f4f6;
-    color: #4b5563;
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
 }
 
 .save-button {
-    background: #0f766e;
-    color: #fff;
+    background: #0f766e !important;
+    color: #fff !important;
 }
 </style>
