@@ -55,6 +55,12 @@
 - 处理：停掉占用 5173 的旧 dev → 删除 `apps/app/node_modules/.vite` 缓存 → 重新 `npm run dev:h5` 强制重新预打包；浏览器复验书架与思维导图均正常。
 - 规则（务必记住）：凡新增/改动了向 workspace 包（如 `@teacher-exam/core`、`@teacher-exam/types`）导出的内容后，必须重启 `dev:h5`（或删除 `apps/app/node_modules/.vite` 缓存），否则 Vite 预打包缓存仍是旧版本。
 
+### 样式偏移修复
+
+- 根据用户截图修复首页两处偏移：`重置` 按钮改为固定 px 尺寸，避免 H5 宽视口下 rpx 放大导致按钮过大；底部终极打卡条改为固定 px 高度并抬到 tabBar 上方，避免被 tabBar 裁切。
+- 修复仪表盘「最近打卡随笔」文案右对齐问题，改为左对齐并补充行高。
+- 验证通过：`pnpm type-check`、IDE lints、H5 浏览器截图复验首页与仪表盘。
+
 ## 2026-06-22
 
 ### 初始化决策

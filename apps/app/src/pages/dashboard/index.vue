@@ -161,6 +161,7 @@ function levelClass(minutes: number) {
 .checkin-row {
     align-items: flex-start;
     gap: 20rpx;
+    justify-content: flex-start;
 }
 
 .checkin-date {
@@ -173,7 +174,8 @@ function levelClass(minutes: number) {
     flex: 1;
     color: #4b5563;
     font-size: 24rpx;
-    text-align: right;
+    line-height: 1.5;
+    text-align: left;
 }
 
 .progress {

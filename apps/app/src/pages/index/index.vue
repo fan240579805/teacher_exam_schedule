@@ -191,7 +191,7 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 <style scoped>
 .page {
     min-height: 100vh;
-    padding: 32rpx 32rpx 160rpx;
+    padding: 32rpx 32rpx 280rpx;
 }
 
 .hero,
@@ -207,6 +207,10 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 .task-card {
     align-items: center;
     justify-content: space-between;
+}
+
+.hero {
+    gap: 24rpx;
 }
 
 .eyebrow,
@@ -231,6 +235,16 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
     background: #0f766e;
     color: #fff;
     font-size: 26rpx;
+}
+
+.ghost-button {
+    flex-shrink: 0;
+    width: 72px;
+    height: 56px;
+    margin: 8px 0 0;
+    padding: 0;
+    line-height: 56px;
+    font-size: 16px;
 }
 
 .week-strip {
@@ -365,19 +379,19 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 .checkin-bar {
     position: fixed;
     right: 0;
-    bottom: 0;
+    bottom: calc(50px + env(safe-area-inset-bottom));
     left: 0;
     z-index: 8;
-    padding: 20rpx 32rpx 32rpx;
+    padding: 8px 32rpx 10px;
     background: linear-gradient(180deg, rgba(247, 250, 252, 0), #f7fafc 32%);
 }
 
 .checkin-button {
-    min-height: 96rpx;
+    min-height: 52px;
     border-radius: 999rpx;
     background: #d1d5db;
     color: #4b5563;
-    font-size: 30rpx;
+    font-size: 16px;
     font-weight: 800;
 }
 

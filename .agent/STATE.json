@@ -1,7 +1,7 @@
 {
     "project": "深教考通",
     "phase": "P7-library-mindmap-browser-validated",
-    "activeWork": "知识树 Tab 已重构为「复习书架 + 可编辑思维导图」：新增 books/book_nodes 数据模型、library store、书架页与思维导图页，思维导图用非递归绝对布局保证小程序与 H5 双端一致，已通过浏览器逐功能走查。",
+    "activeWork": "知识树 Tab 已重构为「复习书架 + 可编辑思维导图」并通过浏览器逐功能走查；首页重置按钮/底部打卡条偏移和仪表盘最近随笔右对齐问题已修复并完成 H5 截图复验。",
     "activeWorktree": "main",
     "blocked": [],
     "authoringPolicy": {
@@ -19,6 +19,6 @@
         "primary": "harness/html-preview 本地 HTML + mock 数据",
         "secondary": "pnpm dev:h5 与 pnpm build:mp-weixin"
     },
-    "nextImmediateAction": "书架与思维导图已完成本地验收并提交推送。后续可做：思维导图节点拖拽排序、books/book_nodes 接入真实 Supabase 读写、微信开发者工具真机走查长按手感。",
-    "updatedAt": "2026-06-23T16:10:00+08:00"
+    "nextImmediateAction": "样式修复已完成，等待用户确认是否提交；后续可做：思维导图节点拖拽排序、books/book_nodes 接入真实 Supabase 读写、微信开发者工具真机走查长按手感。",
+    "updatedAt": "2026-06-23T17:09:00+08:00"
 }
