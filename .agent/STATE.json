@@ -1,10 +1,10 @@
 {
     "project": "深教考通",
-    "phase": "P10-tab3-tab4-week-strip-redesign",
-    "activeWork": "按用户 v6.0 需求交付（1）首页周历改为「中文星期 + 日期数字 + 已打卡圆点」三段式、重置按钮改为「↻ 重置计划」；（2）Tab 3 仪表盘改名为「统计」并重构为 5x7 热力日历 + 2x2 核心指标（完美达标天数/日均学习时长/已掌握考点/刷题正确率） + 最近随笔 + 各科进度 + 5 维雷达图；（3）新建 Tab 4「我的」页：用户卡片 + 倒计时 + 三组列表（复习计划/考点库/关于） + 广告位；（4）tabBar 扩为 4 个 tab（今日/知识树/统计/我的）；（5）Pinia store 新增 actionLogs/dailyTaskCapHours/cloudSyncStatus + 7 个联动 computed + restoreArchived/clearLocalCache 2 个 action；（6）mockHeatmap 扩充到 35 天 + 新增 mockActionLogs；（7）Playwright 验收脚本从 32 项扩到 65 项。",
+    "phase": "P10.1-home-button-bottom-and-monthly-calendar",
+    "activeWork": "针对用户真机反馈的 2 个问题修复：（1）首页打卡按钮 .checkin-bar bottom 由 50px+safe-area 改为 safe-area，紧贴 tabBar 顶部；.page 底部 padding 从 280rpx 收紧到 200rpx；（2）统计页热力日历从『5x7 最近 5 周色块』改造成『可切月份的月历视图』：新增 month picker（YYYY 年 M 月）+ 一~日 7 列周表头 + 月内每个有效格子显示日号 + 当日主题色描边 + 占位格补齐 7 列；Playwright 验收从 65 项扩到 70 项。",
     "recentValidation": {
-        "playwrightAssertions": "65/65 通过（在 P9.1 的 32 项基础上新增 33 项：首页周历 3 + 统计页文案 9 + 热力日历 1 + 2x2 指标 1 + 初值 0/14 1 + 雷达 2 + 我的页 17）",
-        "visualScreenshots": "8 张关键截图目视确认：1-home-default（新周历 + 重置计划）、2-dashboard-initial（热力日历 + 2x2 指标 + 雷达）、3-home-after-settle、4-dashboard-after-settle、5-sheet-primary-button、6-checkin-modal、7-profile-page（我的页完整）、8-tabbar（4 个 tab）",
+        "playwrightAssertions": "70/70 通过（在 P10 的 65 项基础上新增 5 项：首页打卡按钮 bottom<10px 贴底、月历网格 7 列对齐 28/35/42 格之一、有效格子全部显示日号、月份选择器渲染并显示 YYYY 年 M 月、周表头一~日 7 列）",
+        "visualScreenshots": "8 张关键截图目视确认：1-home-default（底部 padding 收紧 + 按钮贴底）、2-dashboard-initial（6 月月历 30 天 + 24 日主题色描边 + 多日深绿格 + 月份选择器）、3-home-after-settle、4-dashboard-after-settle、5-sheet-primary-button、6-checkin-modal、7-profile-page、8-tabbar",
         "unitTests": "vitest 10/10 通过",
         "typeCheck": "vue-tsc 0 错误",
         "build": "build:h5 + build:mp-weixin 双端通过"
@@ -25,17 +25,19 @@
         "Playwright 在 H5 build 产物里点击底部按钮会被 uni-tabbar 拦截，必须先用 page.evaluate 隐藏 uni-tabbar.uni-tabbar-bottom；不能用 force click，会跳过 vue 事件冒泡。但后续验收 tabbar 本身时要记得在 evaluate 中设回 display=''。",
         "首页周历 .week-day 应为「中文星期 + 日期数字 + 圆点」三段布局；weekDays 是 computed，以「今天」为参考点回退到周一连续 7 天，结合 store.dailyCheckins 的 checkinDate 集合判定“是否已打卡”。",
         "Tab 3 「统计」页雷达图用纯 CSS clip-path: polygon 实现，不依赖 echarts/ucharts，三层同心圆背景 + 5 条轴线 + 中心 50%/50% 取点。需要的 5 个分数从 store.interviewRadar 读取，迁移 Supabase 只需替换 computed 源。",
-        "Tab 4 「我的」页面 mock 样式列表是纯 <view> 实现，未依赖 uni-list/uni-list-item 组件，避免额外包含 uni 库；报名反馈等用 uni.showModal/uni.showActionSheet。后续接入真实页面可跳转同序升级为路由类 page。"
+        "Tab 4 「我的」页面 mock 样式列表是纯 <view> 实现，未依赖 uni-list/uni-list-item 组件，避免额外包含 uni 库；报名反馈等用 uni.showModal/uni.showActionSheet。后续接入真实页面可跳转同序升级为路由类 page。",
+        "首页打卡按钮 .checkin-bar 应紧贴 tabBar 顶部（bottom: env(safe-area-inset-bottom)），而非额外抬高 50px；同时 .page 必须留 200rpx 底部 padding 让最后一张任务卡片能滚出固定按钮区域。",
+        "Tab 3 打卡日历采用「月历」语义而非「最近 N 天色块」：monthOptions 收集 heatmap 中出现过的所有 YYYY-MM + 当月，selectedMonthIdx 默认指向当月；monthGrid computed 通过 firstDay.getDay() 算前导占位 + 月内日数 + 尾部补 7 倍数；每个非占位格中心渲染日号，hot-2/hot-3 深色块上日号自动反白。"
     ],
     "secretsPolicy": {
         "storeRealSecrets": false,
         "notes": "微信小程序 AppID 不属于密钥可入库；appsecret、Supabase service_role key 严禁提交，客户端严禁 service_role。"
     },
     "validationStrategy": {
-        "primary": "harness/playwright-verify.mjs 跑 chromium + 静态服务器对 H5 build 产物做 65 项断言（首页 11 + 统计页 18 + 联动 3 + 按钮样式 13 + 我的页 17 + tabBar 5）。",
+        "primary": "harness/playwright-verify.mjs 跑 chromium + 静态服务器对 H5 build 产物做 70 项断言（首页 12 + 统计页 23 + 联动 3 + 按钮样式 13 + 我的页 17 + tabBar 5）。",
         "secondary": "pnpm test（10 条核心单测）、pnpm --filter @teacher-exam/app run type-check、pnpm build:h5、pnpm build:mp-weixin。",
         "legacy": "harness/html-preview 本地 HTML + mock 数据仍可用作零依赖快速预览。"
     },
-    "nextImmediateAction": "等待用户在微信开发者工具中导入 `apps/app/dist/build/mp-weixin` 真机走查 4 个 tab：今日（新周历）、知识树、统计（热力日历 + 4 个指标 + 雷达图）、我的（用户卡 + 3 组设置 + 广告位）。后续可做：思维导图节点拖拽、books/book_nodes 接入真实 supabase、面试雷达接入 interview_runs 表、广告位接入 <ad> 组件。",
-    "updatedAt": "2026-06-24T02:10:00+08:00"
+    "nextImmediateAction": "等待用户在微信开发者工具中导入 `apps/app/dist/build/mp-weixin` 真机验证：①首页底部打卡按钮紧贴 tabBar 不再悬空、最后一张任务卡片可滚出按钮区域；②统计页打卡日历显示当月每一天的日号 + 当日有主题色描边 + 月份选择器可切换历史月份查看历史打卡分布。后续可做：思维导图节点拖拽、books/book_nodes 接入真实 supabase、面试雷达接入 interview_runs 表、广告位接入 <ad> 组件、月历加左右翻月手势。",
+    "updatedAt": "2026-06-24T02:25:00+08:00"
 }

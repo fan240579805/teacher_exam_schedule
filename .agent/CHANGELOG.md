@@ -2,6 +2,61 @@
 
 ## 2026-06-24
 
+### P10.1 首页打卡按钮贴底 + 统计页热力日历改为可切月月历
+
+针对用户提交的两张真机截图反馈：① 首页底部打卡按钮悬空在 tabBar 上方约 50px，下方仍能看到残缺的任务卡片，体感被"卡腰"；② 统计页打卡日历只是色块矩阵，看不出具体几号、也无法切换月份查看历史。
+
+#### 一、首页打卡按钮真正"置于底部"
+
+[apps/app/src/pages/index/index.vue](apps/app/src/pages/index/index.vue)：
+
+- `.checkin-bar` 的 `bottom` 由 `calc(50px + env(safe-area-inset-bottom))` 改为 `env(safe-area-inset-bottom)`，紧贴 tabBar 顶部，不再额外抬高 50px。
+- `.checkin-bar` padding 从 `8px 32rpx 10px` 微调为 `12rpx 32rpx 16rpx`，让按钮上下留白与 tabBar 节奏一致。
+- `.page` 底部 padding 从 `280rpx` 收紧到 `200rpx`，让最后一张任务卡片可以完整滚出固定按钮区域，而不是被遮在按钮下方半截可见、半截透出。
+
+#### 二、Tab 3 打卡日历改为「可切月份的月历视图」
+
+[apps/app/src/pages/dashboard/index.vue](apps/app/src/pages/dashboard/index.vue)：
+
+- **顶部月份选择器**：用 `<picker mode="selector" :range="monthOptions" range-key="label">` 实现，浅灰胶囊按钮里显示当前选中的「YYYY 年 M 月 ▾」。`monthOptions` 收集 `store.heatmap` 中出现过的全部 `YYYY-MM` 并补齐"当月"，确保至少有一个可选项；默认 `selectedMonthIdx` 指向当月。
+- **周表头**：新增 `.weekday-row` 渲染「一二三四五六日」7 列，与下方网格严格按 `grid-template-columns: repeat(7, 1fr)` 对齐。
+- **月历网格 `monthGrid` computed**：
+    1. 取选中月份首日的 `getDay()`（JS 周日=0）转换成「周一=0...周日=6」算前导占位数；
+    2. 用 `new Date(year, month, 0).getDate()` 拿到当月天数，循环填日号；
+    3. 末尾用占位补齐 7 的整数倍，保证最后一行不会出现孤立窄格。
+    4. 每个非占位格在中心展示日号，深色块（hot-2 / hot-3）上日号自动反白。
+    5. 当日格加 3rpx 主题色 `inset` 内描边，`.heat-cell.today { box-shadow: 0 0 0 3rpx #0f766e inset }`。
+- **徽章保留**：`★ 当日有随笔` / `▣ 当日有照片` 仍渲染在格子右上角，不影响日号居中显示。
+- 颜色档位与图例保持原 4 档（`hot-0` 灰 / `hot-1` 浅绿 / `hot-2` 中绿 / `hot-3` 深绿），数据档位逻辑沿用 `levelClassByMinutes`。
+
+#### 三、Playwright 验收脚本升级到 70 项
+
+[harness/playwright-verify.mjs](harness/playwright-verify.mjs)：
+
+- 移除原「热力日历渲染 35 格」的硬断言，替换为「月历网格按 7 列对齐（28 / 35 / 42 格之一）」自适应断言。
+- 新增 5 项断言：
+    1. 首页 `.checkin-bar` 的 `getComputedStyle().bottom` 数值 < 10px（贴底）；
+    2. 月历每个非占位格都通过 `.heat-cell:not(.placeholder) .cell-date` 渲染日号（正则 `^\d{1,2}$`）；
+    3. 顶部 `.month-picker` 元素数量 = 1；
+    4. 月份选择器文案匹配「YYYY 年 M 月」格式；
+    5. `.weekday-text` 7 项且首项为「一」、末项为「日」。
+
+#### 四、验证全绿
+
+- Playwright **70/70** 全部通过（在 P10 的 65 项基础上新增 5 项）。
+- `pnpm test` 单元测试 10/10。
+- `vue-tsc --noEmit` 0 错误。
+- `pnpm build:h5` + `pnpm build:mp-weixin` 双端构建通过。
+- 关键截图：`2-dashboard-initial.png` 视觉确认 6 月月历 30 天 + 24 日主题色描边 + 多日深绿格 + 月份选择器；`1-home-default.png` 视觉确认底部 padding 已收紧。
+
+#### 五、待用户侧最终验收
+
+待用户在微信开发者工具导入 `apps/app/dist/build/mp-weixin` 真机走查：
+1. 首页底部打卡按钮紧贴 tabBar 顶部、最后一张任务卡片不再被按钮遮挡；
+2. 统计页打卡日历显示当月每一天的日号、当日有主题色描边、点击右上角月份选择器可切换历史月份查看历史打卡分布。
+
+---
+
 ### P10 Tab 3「统计」/ Tab 4「我的」独立架构 + 首页周历改版（v6.0）
 
 按用户提交的 v6.0 需求文档（`prd_final.md` §五已同步收录）落地三块改造：① 首页周历改造为「中文星期 + 日期数字 + 已打卡圆点」三段式（与设计图一致）；② 仪表盘改名为「统计」并按 PRD §一·1 的多巴胺逻辑彻底重构（5x7 热力日历 / 2x2 核心指标 / 最近随笔 / 各科进度 / 五维雷达）；③ 新建 Tab 4「我的」页（用户卡 / 倒计时 / 三组列表 / 广告位）。

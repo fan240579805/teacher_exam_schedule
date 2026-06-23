@@ -216,7 +216,8 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 <style scoped>
 .page {
     min-height: 100vh;
-    padding: 32rpx 32rpx 280rpx;
+    /* 底部预留 200rpx，刚好让最后一张任务卡片可以滚出固定按钮区域。 */
+    padding: 32rpx 32rpx 200rpx;
 }
 
 .hero,
@@ -493,11 +494,12 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 .checkin-bar {
     position: fixed;
     right: 0;
-    bottom: calc(50px + env(safe-area-inset-bottom));
+    /* 紧贴 tabBar 顶部，去掉原 50px 间距，让按钮真正"置于底部"。 */
+    bottom: env(safe-area-inset-bottom);
     left: 0;
     z-index: 8;
-    padding: 8px 32rpx 10px;
-    background: linear-gradient(180deg, rgba(247, 250, 252, 0), #f7fafc 32%);
+    padding: 12rpx 32rpx 16rpx;
+    background: linear-gradient(180deg, rgba(247, 250, 252, 0), #f7fafc 28%);
 }
 
 .checkin-button {

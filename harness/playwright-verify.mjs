@@ -122,6 +122,12 @@ function expect(label, cond, detail = '') {
         const isPaleGray = /229, 231, 235|247, 247, 247|209, 213, 219/.test(checkinBg) || checkinBg.includes('15, 118, 110');
         expect('打卡按钮未就绪态：浅灰底，不带主色亮色', isPaleGray, `bg=${checkinBg}`);
 
+        // checkin-bar 应紧贴 tabBar 顶部（bottom 不再额外抬高 50px）
+        const barBottom = await page.locator('.checkin-bar').evaluate((el) => getComputedStyle(el).bottom);
+        // env(safe-area-inset-bottom) 在 desktop 浏览器解析为 0px；只要不再是 ~50px 抬高即可
+        const barBottomNum = Number((barBottom.match(/-?[0-9.]+/) || ['0'])[0]);
+        expect('首页打卡按钮置于底部（紧贴 tabBar，无额外抬高）', barBottomNum < 10, `bottom=${barBottom}`);
+
         await page.screenshot({ path: path.join(SHOTS_DIR, '1-home-default.png'), fullPage: true });
 
         // ====== 2. 统计页验收（Tab 3）======
@@ -140,9 +146,23 @@ function expect(label, cond, detail = '') {
         expect('统计页包含「各科通关进度」', bodyText2.includes('各科通关进度'));
         expect('统计页包含「面试能力雷达」', bodyText2.includes('面试能力雷达'));
 
-        // 热力日历应渲染 5x7=35 格
+        // 月历视图：格子数 = 占位 + 当月天数 + 月末占位，按 7 列对齐，必为 7 的倍数（28/35/42）
         const heatCells = await page.locator('.heat-cell').count();
-        expect('热力日历渲染 35 格（5 行 x 7 列）', heatCells === 35, `cells=${heatCells}`);
+        expect('月历网格按 7 列对齐（28/35/42 格之一）', [28, 35, 42].includes(heatCells), `cells=${heatCells}`);
+
+        // 每个非占位格子必须显示日号数字
+        const dateLabels = await page.locator('.heat-cell:not(.placeholder) .cell-date').allTextContents();
+        expect('每个有效日期格子都显示日号', dateLabels.length >= 28 && dateLabels.every((t) => /^\d{1,2}$/.test(t.trim())), `dateLabels=${JSON.stringify(dateLabels.slice(0, 5))}... total=${dateLabels.length}`);
+
+        // 顶部月份选择器存在
+        const monthPicker = await page.locator('.month-picker').count();
+        expect('打卡日历顶部存在月份选择器', monthPicker === 1, `pickers=${monthPicker}`);
+        const monthLabel = await page.locator('.month-picker-text').textContent();
+        expect('月份选择器显示「YYYY 年 M 月」格式', /\d{4}\s*年\s*\d{1,2}\s*月/.test(monthLabel || ''), `label="${monthLabel}"`);
+
+        // 周表头：一二三四五六日
+        const weekdayHeads = await page.locator('.weekday-text').allTextContents();
+        expect('日历周表头按一~日渲染 7 列', weekdayHeads.length === 7 && weekdayHeads[0].trim() === '一' && weekdayHeads[6].trim() === '日', `heads=${JSON.stringify(weekdayHeads)}`);
 
         // 4 个核心指标卡片
         const metricCards = await page.locator('.metric-card').count();

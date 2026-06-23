@@ -6,19 +6,39 @@
             <text class="desc">所有数据都来自你在首页的真实结算，不掺水。</text>
         </view>
 
-        <!-- 1. 顶部：打卡日历（GitHub Contributions Style 热力图） -->
+        <!-- 1. 顶部：打卡日历（月历样式 · 每格显示日期 · 顶部支持切换月份） -->
         <view class="card">
             <view class="card-head">
                 <text class="card-title">打卡日历</text>
-                <text class="card-sub">最近 5 周</text>
+                <picker
+                    mode="selector"
+                    :range="monthOptions"
+                    range-key="label"
+                    :value="selectedMonthIdx"
+                    @change="onMonthChange"
+                >
+                    <view class="month-picker">
+                        <text class="month-picker-text">{{ monthOptions[selectedMonthIdx]?.label || '本月' }}</text>
+                        <text class="month-picker-arrow">▾</text>
+                    </view>
+                </picker>
             </view>
+
+            <!-- 周几表头（一~日），与下方网格七列对齐 -->
+            <view class="weekday-row">
+                <text v-for="w in weekdayLabels" :key="w" class="weekday-text">{{ w }}</text>
+            </view>
+
             <view class="heat-grid">
                 <view
-                    v-for="day in heatmapCells"
-                    :key="day.date"
+                    v-for="(day, idx) in monthGrid"
+                    :key="day.key + '-' + idx"
                     class="heat-cell"
-                    :class="day.levelClass"
+                    :class="[day.levelClass, { placeholder: day.placeholder, today: day.isToday }]"
                 >
+                    <text v-if="!day.placeholder" class="cell-date" :class="{ 'cell-date-light': day.isDeep }">
+                        {{ day.dayNum }}
+                    </text>
                     <text v-if="day.memoFlag" class="badge memo">★</text>
                     <text v-if="day.imageFlag" class="badge image">▣</text>
                 </view>
@@ -129,22 +149,123 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useStudyStore } from '../../stores/study';
 
 const store = useStudyStore();
 
-// 把 heatmap 整理成 5 行 x 7 列的网格，每个单元格携带强度等级与"是否有随笔/照片"标记。
-const heatmapCells = computed(() => {
+// ====== 月历切换：以 heatmap 中出现过的月份 + 当前月 为可选范围 ======
+const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+
+const monthOptions = computed(() => {
+    // 收集 heatmap 中出现过的所有月份（YYYY-MM），并补齐"当月"以保证至少有一项。
+    const set = new Set<string>();
+    for (const day of store.heatmap) {
+        set.add(day.date.slice(0, 7));
+    }
+    const now = new Date();
+    set.add(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+
+    return Array.from(set)
+        .sort((a, b) => a.localeCompare(b))
+        .map((ym) => {
+            const [y, m] = ym.split('-');
+            return { value: ym, label: `${y} 年 ${Number(m)} 月` };
+        });
+});
+
+// 默认指向"当月"，兜底为最后一项（最近的月份）。
+const selectedMonthIdx = ref(0);
+function initSelectedMonth() {
+    const now = new Date();
+    const cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const idx = monthOptions.value.findIndex((o) => o.value === cur);
+    selectedMonthIdx.value = idx >= 0 ? idx : monthOptions.value.length - 1;
+}
+initSelectedMonth();
+
+function onMonthChange(event: { detail: { value: number } }) {
+    selectedMonthIdx.value = Number(event.detail.value);
+}
+
+// 选中月份的格子矩阵：包含月初对齐周一所需的占位 + 全部日号 + 月末对齐尾行的占位。
+const monthGrid = computed(() => {
+    const ym = monthOptions.value[selectedMonthIdx.value]?.value
+        || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const [yearStr, monthStr] = ym.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr); // 1~12
+
     const memoSet = new Set(store.dailyCheckins.filter((c) => c.memo.trim().length > 0).map((c) => c.checkinDate));
     const imageSet = new Set(store.dailyCheckins.filter((c) => !!c.imageUrl).map((c) => c.checkinDate));
+    const heatMap = new Map(store.heatmap.map((d) => [d.date, d.minutes]));
 
-    return store.heatmap.slice(-35).map((day) => ({
-        date: day.date,
-        levelClass: levelClassByMinutes(day.minutes),
-        memoFlag: memoSet.has(day.date),
-        imageFlag: imageSet.has(day.date)
-    }));
+    // 该月第一天是周几（周一=0 ... 周日=6）。
+    const firstDay = new Date(year, month - 1, 1);
+    const jsDay = firstDay.getDay(); // 0=周日 ... 6=周六
+    const leading = (jsDay + 6) % 7;
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const todayKey = (() => {
+        const t = new Date();
+        return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    })();
+
+    const cells: Array<{
+        key: string;
+        placeholder: boolean;
+        dayNum: number;
+        levelClass: string;
+        isDeep: boolean;
+        isToday: boolean;
+        memoFlag: boolean;
+        imageFlag: boolean;
+    }> = [];
+
+    for (let i = 0; i < leading; i++) {
+        cells.push({
+            key: `pad-${ym}-${i}`,
+            placeholder: true,
+            dayNum: 0,
+            levelClass: 'hot-0',
+            isDeep: false,
+            isToday: false,
+            memoFlag: false,
+            imageFlag: false
+        });
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const minutes = heatMap.get(dateKey) ?? 0;
+        const levelClass = levelClassByMinutes(minutes);
+        cells.push({
+            key: dateKey,
+            placeholder: false,
+            dayNum: d,
+            levelClass,
+            isDeep: levelClass === 'hot-2' || levelClass === 'hot-3',
+            isToday: dateKey === todayKey,
+            memoFlag: memoSet.has(dateKey),
+            imageFlag: imageSet.has(dateKey)
+        });
+    }
+
+    // 用占位补足到 7 的整数倍，让最后一行不会出现孤立窄格。
+    while (cells.length % 7 !== 0) {
+        cells.push({
+            key: `tail-${ym}-${cells.length}`,
+            placeholder: true,
+            dayNum: 0,
+            levelClass: 'hot-0',
+            isDeep: false,
+            isToday: false,
+            memoFlag: false,
+            imageFlag: false
+        });
+    }
+
+    return cells;
 });
 
 const recentMemos = computed(() => [...store.dailyCheckins]
@@ -261,19 +382,77 @@ function formatDate(iso: string) {
     font-size: 22rpx;
 }
 
-/* ====== 热力日历 ====== */
-.heat-grid {
+/* 月份切换选择器 */
+.month-picker {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+    padding: 8rpx 18rpx;
+    border-radius: 999rpx;
+    background: #f3f4f6;
+}
+
+.month-picker-text {
+    color: #1f2933;
+    font-size: 24rpx;
+    font-weight: 600;
+}
+
+.month-picker-arrow {
+    color: #6b7280;
+    font-size: 22rpx;
+}
+
+/* 周表头：一二三四五六日 */
+.weekday-row {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 10rpx;
     margin-top: 24rpx;
 }
 
+.weekday-text {
+    color: #9ca3af;
+    font-size: 22rpx;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* ====== 热力日历 ====== */
+.heat-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10rpx;
+    margin-top: 12rpx;
+}
+
 .heat-cell {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     aspect-ratio: 1 / 1;
     min-height: 64rpx;
     border-radius: 12rpx;
+}
+
+.heat-cell.placeholder {
+    background: transparent;
+}
+
+.heat-cell.today {
+    box-shadow: 0 0 0 3rpx #0f766e inset;
+}
+
+.cell-date {
+    color: #4b5563;
+    font-size: 22rpx;
+    font-weight: 600;
+    /* 让数字始终在格子中心展示，徽章则绝对定位在右上角不影响排版 */
+}
+
+.cell-date-light {
+    color: #fff;
 }
 
 .hot-0 {
