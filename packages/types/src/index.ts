@@ -75,6 +75,21 @@ export interface StudyLog {
     createdAt: string;
 }
 
+export interface DailyCheckin {
+    id: UUID;
+    workspaceId: UUID;
+    checkinDate: string;
+    streakDays: number;
+    memo: string;
+    imageUrl?: string | null;
+    createdAt: string;
+}
+
+export interface CreateDailyCheckinInput {
+    memo: string;
+    imagePath?: string | null;
+}
+
 export interface ReviewState {
     nodeId: UUID;
     intervalIndex: number;
@@ -102,5 +117,6 @@ export interface HeatmapDay {
     date: string;
     minutes: number;
     closedCount: number;
-    hasArtifact: boolean;
+    hasCheckin: boolean;
+    imageUrl?: string | null;
 }

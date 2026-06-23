@@ -1,9 +1,13 @@
 {
     "project": "深教考通",
-    "phase": "P5-validated",
-    "activeWork": "首版项目构建与本地 mock 验收已完成",
+    "phase": "P6-final-prd-browser-validated",
+    "activeWork": "终版 PRD 对齐已完成并通过 harness 与浏览器验收：daily_checkins、终极打卡按钮、DailyCheckinModal、热力月历图片标记、L7 修剪和模板入口已落地。",
     "activeWorktree": "main",
     "blocked": [],
+    "authoringPolicy": {
+        "language": "所有计划、进度、日志、状态、文档、交接说明和提交信息必须使用中文。",
+        "technicalTerms": "文件名、表名、函数名、命令名、包名可以保留英文原文，但解释文字必须使用中文。"
+    },
     "secretsPolicy": {
         "storeRealSecrets": false,
         "notes": "真实微信小程序 appid/appkey/appsecret、Supabase URL/anon key/service_role key 均由用户后续手动填写；客户端严禁 service_role。"
@@ -12,6 +16,6 @@
         "primary": "harness/html-preview 本地 HTML + mock 数据",
         "secondary": "pnpm dev:h5 与 pnpm build:mp-weixin"
     },
-    "nextImmediateAction": "用户补齐 Supabase 与微信小程序配置后进行真实后端联调；或继续深化冷启动生产表单与完整业务交互。",
-    "updatedAt": "2026-06-22T20:35:00+08:00"
+    "nextImmediateAction": "已准备提交。提交后如继续推进，优先做真实 Supabase Auth 联调、Storage 公开访问策略核验、微信开发者工具真机预览，以及打卡历史详情页。",
+    "updatedAt": "2026-06-23T14:01:00+08:00"
 }

@@ -30,12 +30,17 @@
 -- settle_node(node_id, action_type, payload, duration, score, mastery, trap_memo):
 --   原子写 study_logs -> 标记叶子 done -> 更新 node_reviews -> 解锁同父节点下满足串行条件的下一个节点。
 
--- 5. 仪表盘与面试规范
--- artifacts: 每日全闭环后的战果照片 Storage path。
+-- 5. 终极打卡、仪表盘与面试规范
+-- daily_checkins: 全局终极打卡日志。每日任务全部闭环后，由首页底部固定大打卡按钮主动触发打卡随笔弹窗。
+--   checkin_date: 工作区内的打卡日期。
+--   streak_days: 当前连续坚持天数。
+--   memo: 随笔文字，可为空。
+--   image_url: Supabase Storage 图片链接，终版限制每日最多 1 张。
+--   说明：当前权威需求为 daily_checkins；可执行迁移文件已在 P6 从旧 artifacts 语义同步调整。
 -- interview_sessions / interview_checklist_items:
 --   试讲自评目录与锁死检查单；complete_interview_session() 要求全绿才能闭环。
 
 -- 6. RLS
 -- catalog_options / official templates 对登录用户公开读取。
--- workspaces/nodes/study_logs/node_reviews/artifacts/interview_* 全部按 user_id 或 workspace owner 限制。
+-- workspaces/nodes/study_logs/node_reviews/daily_checkins/interview_* 全部按 user_id 或 workspace owner 限制。
 -- 客户端仅允许使用 anon key，严禁 service_role 进入应用代码。

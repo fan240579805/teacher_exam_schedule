@@ -1,4 +1,4 @@
-import type { HeatmapDay, KnowledgeNode, ReviewState, Workspace } from '@teacher-exam/types';
+import type { DailyCheckin, HeatmapDay, KnowledgeNode, ReviewState, Workspace } from '@teacher-exam/types';
 
 const now = '2026-06-22T08:00:00.000Z';
 
@@ -41,11 +41,41 @@ export const mockReviews: ReviewState[] = [
 ];
 
 export const mockHeatmap: HeatmapDay[] = [
-    { date: '2026-06-18', minutes: 120, closedCount: 3, hasArtifact: false },
-    { date: '2026-06-19', minutes: 180, closedCount: 4, hasArtifact: true },
-    { date: '2026-06-20', minutes: 60, closedCount: 1, hasArtifact: false },
-    { date: '2026-06-21', minutes: 210, closedCount: 5, hasArtifact: true },
-    { date: '2026-06-22', minutes: 0, closedCount: 0, hasArtifact: false }
+    { date: '2026-06-18', minutes: 120, closedCount: 3, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-19', minutes: 180, closedCount: 4, hasCheckin: true, imageUrl: 'mock://checkins/2026-06-19.jpg' },
+    { date: '2026-06-20', minutes: 60, closedCount: 1, hasCheckin: true, imageUrl: null },
+    { date: '2026-06-21', minutes: 210, closedCount: 5, hasCheckin: true, imageUrl: 'mock://checkins/2026-06-21.jpg' },
+    { date: '2026-06-22', minutes: 0, closedCount: 0, hasCheckin: false, imageUrl: null }
+];
+
+export const mockDailyCheckins: DailyCheckin[] = [
+    {
+        id: 'checkin-2026-06-18',
+        workspaceId: mockWorkspace.id,
+        checkinDate: '2026-06-18',
+        streakDays: 1,
+        memo: '完成教育本质属性复盘，错因集中在概念外延。',
+        imageUrl: null,
+        createdAt: '2026-06-18T21:30:00.000Z'
+    },
+    {
+        id: 'checkin-2026-06-19',
+        workspaceId: mockWorkspace.id,
+        checkinDate: '2026-06-19',
+        streakDays: 2,
+        memo: '今天把教育社会属性和个体发展功能区分清楚了。',
+        imageUrl: 'mock://checkins/2026-06-19.jpg',
+        createdAt: '2026-06-19T21:30:00.000Z'
+    },
+    {
+        id: 'checkin-2026-06-21',
+        workspaceId: mockWorkspace.id,
+        checkinDate: '2026-06-21',
+        streakDays: 1,
+        memo: '周末恢复执行，重点记住串行推进不要跳章。',
+        imageUrl: 'mock://checkins/2026-06-21.jpg',
+        createdAt: '2026-06-21T21:30:00.000Z'
+    }
 ];
 
 function node(partial: Partial<KnowledgeNode>): KnowledgeNode {

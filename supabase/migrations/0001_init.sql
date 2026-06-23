@@ -108,14 +108,16 @@ create table public.node_reviews (
     unique (node_id)
 );
 
-create table public.artifacts (
+create table public.daily_checkins (
     id uuid primary key default gen_random_uuid(),
     workspace_id uuid not null references public.workspaces(id) on delete cascade,
-    user_id uuid not null references auth.users(id) on delete cascade,
-    study_date date not null,
-    storage_path text not null,
-    caption text,
-    created_at timestamptz not null default now()
+    user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+    checkin_date date not null,
+    streak_days integer not null default 1 check (streak_days > 0),
+    memo text not null default '',
+    image_url text,
+    created_at timestamptz not null default now(),
+    unique (workspace_id, checkin_date)
 );
 
 create table public.interview_sessions (
@@ -144,7 +146,7 @@ create index idx_nodes_parent on public.nodes(workspace_id, parent_id, order_ind
 create index idx_nodes_status on public.nodes(workspace_id, status, level);
 create index idx_study_logs_workspace_day on public.study_logs(workspace_id, created_at);
 create index idx_node_reviews_due on public.node_reviews(workspace_id, next_review_at, priority);
-create index idx_artifacts_workspace_day on public.artifacts(workspace_id, study_date);
+create index idx_daily_checkins_workspace_day on public.daily_checkins(workspace_id, checkin_date);
 
 create or replace function public.touch_updated_at()
 returns trigger
@@ -438,7 +440,7 @@ alter table public.template_nodes enable row level security;
 alter table public.nodes enable row level security;
 alter table public.study_logs enable row level security;
 alter table public.node_reviews enable row level security;
-alter table public.artifacts enable row level security;
+alter table public.daily_checkins enable row level security;
 alter table public.interview_sessions enable row level security;
 alter table public.interview_checklist_items enable row level security;
 
@@ -478,7 +480,7 @@ for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "review owner can manage" on public.node_reviews
 for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
-create policy "artifact owner can manage" on public.artifacts
+create policy "daily checkin owner can manage" on public.daily_checkins
 for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 create policy "interview session owner can manage" on public.interview_sessions

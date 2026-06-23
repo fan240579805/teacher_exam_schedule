@@ -36,7 +36,7 @@
         </view>
 
         <view v-if="store.todayTasks.length === 0" class="empty">
-            <text>今日任务已闭环，可以上传战果照片。</text>
+            <text>今日任务已清空，可以通过底部按钮完成终极打卡。</text>
         </view>
 
         <view v-if="activeNode" class="sheet-mask" @click="closeSheet">
@@ -74,12 +74,28 @@
                 <button class="text-button" @click="closeSheet">取消</button>
             </view>
         </view>
+
+        <view class="checkin-bar">
+            <button class="checkin-button" :class="{ ready: canCheckin }" :disabled="!canCheckin" @click="openCheckin">
+                {{ checkinButtonText }}
+            </button>
+        </view>
+
+        <DailyCheckinModal
+            v-if="showCheckinModal"
+            :workspace-title="store.workspace.title"
+            :streak-days="store.currentStreakDays"
+            :saving="savingCheckin"
+            @close="closeCheckin"
+            @save="saveCheckin"
+        />
     </view>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
-import type { ActionType } from '@teacher-exam/types';
+import type { ActionType, CreateDailyCheckinInput } from '@teacher-exam/types';
+import DailyCheckinModal from '../../components/DailyCheckinModal.vue';
 import { useStudyStore } from '../../stores/study';
 
 const store = useStudyStore();
@@ -91,9 +107,23 @@ const trapMemo = ref('');
 const reciteMastery = ref<20 | 50 | 80 | 100>(80);
 const objective = reactive({ totalCount: 10, wrongCount: 0 });
 const comprehensive = reactive({ durationMinutes: 30, scorePoints: 80 });
+const showCheckinModal = ref(false);
+const savingCheckin = ref(false);
 
 const actionType = computed(() => actionTypes[actionIndex.value]);
 const activeNode = computed(() => store.nodes.find((node) => node.id === activeNodeId.value));
+const canCheckin = computed(() => store.todayTasks.length === 0 && store.todayTotalCount > 0);
+const checkinButtonText = computed(() => {
+    if (store.todayCheckin) {
+        return `今日已打卡，连续 ${store.todayCheckin.streakDays} 天`;
+    }
+
+    if (canCheckin.value) {
+        return '已完成今日所有任务，去打卡';
+    }
+
+    return `今日任务执行中 (${store.todayProgressText})`;
+});
 const weekDays = ['一', '二', '三', '四', '五', '六', '日'].map((label, index) => ({
     label,
     active: index < 4
@@ -131,12 +161,37 @@ function submitSettlement() {
     uni.showToast({ title: '已闭环', icon: 'success' });
     closeSheet();
 }
+
+function openCheckin() {
+    if (!canCheckin.value) {
+        return;
+    }
+
+    showCheckinModal.value = true;
+}
+
+function closeCheckin() {
+    if (!savingCheckin.value) {
+        showCheckinModal.value = false;
+    }
+}
+
+async function saveCheckin(input: CreateDailyCheckinInput) {
+    savingCheckin.value = true;
+    try {
+        await store.saveDailyCheckin(input);
+        uni.showToast({ title: '打卡已保存', icon: 'success' });
+        showCheckinModal.value = false;
+    } finally {
+        savingCheckin.value = false;
+    }
+}
 </script>
 
 <style scoped>
 .page {
     min-height: 100vh;
-    padding: 32rpx;
+    padding: 32rpx 32rpx 160rpx;
 }
 
 .hero,
@@ -305,5 +360,29 @@ function submitSettlement() {
     margin-top: 12rpx;
     background: transparent;
     color: #6b7280;
+}
+
+.checkin-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 8;
+    padding: 20rpx 32rpx 32rpx;
+    background: linear-gradient(180deg, rgba(247, 250, 252, 0), #f7fafc 32%);
+}
+
+.checkin-button {
+    min-height: 96rpx;
+    border-radius: 999rpx;
+    background: #d1d5db;
+    color: #4b5563;
+    font-size: 30rpx;
+    font-weight: 800;
+}
+
+.checkin-button.ready {
+    background: #0f766e;
+    color: #fff;
 }
 </style>

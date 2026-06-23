@@ -54,5 +54,5 @@ export function canUnlockCandidate(candidate: KnowledgeNode, siblings: Knowledge
 
     return siblings
         .filter((node) => node.parentId === candidate.parentId && node.orderIndex < candidate.orderIndex)
-        .every((node) => node.status === 'done');
+        .every((node) => node.status === 'done' || node.status === 'archived');
 }

@@ -3,7 +3,7 @@
         <view class="summary">
             <text class="eyebrow">Dashboard & Asset Vault</text>
             <text class="title">进度、热力与偏科风险</text>
-            <text class="desc">闭环后可引导上传战果照片；当前 mock 模式仅展示胶片标识。</text>
+            <text class="desc">热力月历读取每日终极打卡日志；上传图片的日期会叠加图片标记。</text>
         </view>
 
         <view class="card">
@@ -11,8 +11,16 @@
             <view class="heat-grid">
                 <view v-for="day in store.heatmap" :key="day.date" class="heat-cell" :class="levelClass(day.minutes)">
                     <text>{{ day.date.slice(8) }}</text>
-                    <text v-if="day.hasArtifact" class="film">▣</text>
+                    <text v-if="day.imageUrl" class="film">▣</text>
                 </view>
+            </view>
+        </view>
+
+        <view class="card">
+            <text class="card-title">最近打卡随笔</text>
+            <view v-for="item in recentCheckins" :key="item.id" class="checkin-row">
+                <text class="checkin-date">{{ item.checkinDate }}</text>
+                <text class="checkin-memo">{{ item.memo || '今日只完成打卡，未填写随笔。' }}</text>
             </view>
         </view>
 
@@ -46,6 +54,7 @@ const store = useStudyStore();
 const totalLeaves = computed(() => store.nodes.filter((node) => node.isLeaf).length);
 const doneLeaves = computed(() => store.nodes.filter((node) => node.isLeaf && node.status === 'done').length);
 const progress = computed(() => totalLeaves.value === 0 ? 0 : Math.round((doneLeaves.value / totalLeaves.value) * 100));
+const recentCheckins = computed(() => [...store.dailyCheckins].sort((a, b) => b.checkinDate.localeCompare(a.checkinDate)).slice(0, 3));
 const checklist = ['耗时控制达标', '无明显卡壳', '板书完整', '环节过渡自然'];
 
 function levelClass(minutes: number) {
@@ -141,11 +150,30 @@ function levelClass(minutes: number) {
 }
 
 .burn-row,
-.check-row {
+.check-row,
+.checkin-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-top: 20rpx;
+}
+
+.checkin-row {
+    align-items: flex-start;
+    gap: 20rpx;
+}
+
+.checkin-date {
+    color: #0f766e;
+    font-size: 24rpx;
+    font-weight: 700;
+}
+
+.checkin-memo {
+    flex: 1;
+    color: #4b5563;
+    font-size: 24rpx;
+    text-align: right;
 }
 
 .progress {

@@ -1,3 +1,5 @@
+import type { DailyCheckin } from '@teacher-exam/types';
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -8,6 +10,7 @@ export interface SupabaseRequestOptions {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
     data?: string | Record<string, unknown> | ArrayBuffer;
     accessToken?: string;
+    headers?: Record<string, string>;
 }
 
 export function requestSupabase<T>(options: SupabaseRequestOptions): Promise<T> {
@@ -23,7 +26,8 @@ export function requestSupabase<T>(options: SupabaseRequestOptions): Promise<T> 
             header: {
                 apikey: supabaseAnonKey,
                 Authorization: `Bearer ${options.accessToken ?? supabaseAnonKey}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...options.headers
             },
             success: (response) => {
                 if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -36,6 +40,32 @@ export function requestSupabase<T>(options: SupabaseRequestOptions): Promise<T> 
             fail: reject
         });
     });
+}
+
+export async function upsertDailyCheckin(record: DailyCheckin, accessToken?: string) {
+    if (isMockMode) {
+        return record;
+    }
+
+    await requestSupabase<unknown>({
+        path: '/rest/v1/daily_checkins?on_conflict=workspace_id,checkin_date',
+        method: 'POST',
+        accessToken,
+        headers: {
+            Prefer: 'resolution=merge-duplicates'
+        },
+        data: {
+            id: record.id,
+            workspace_id: record.workspaceId,
+            checkin_date: record.checkinDate,
+            streak_days: record.streakDays,
+            memo: record.memo,
+            image_url: record.imageUrl ?? null,
+            created_at: record.createdAt
+        }
+    });
+
+    return record;
 }
 
 export function uploadSupabaseFile(options: {

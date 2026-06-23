@@ -199,11 +199,11 @@
     ];
 
     const initialHeat = [
-        { date: '06-18', minutes: 120, hasArtifact: false },
-        { date: '06-19', minutes: 180, hasArtifact: true },
-        { date: '06-20', minutes: 60, hasArtifact: false },
-        { date: '06-21', minutes: 210, hasArtifact: true },
-        { date: '06-22', minutes: 0, hasArtifact: false }
+        { date: '06-18', minutes: 120, hasCheckin: true, imageUrl: null },
+        { date: '06-19', minutes: 180, hasCheckin: true, imageUrl: 'mock://checkins/06-19.jpg' },
+        { date: '06-20', minutes: 60, hasCheckin: true, imageUrl: null },
+        { date: '06-21', minutes: 210, hasCheckin: true, imageUrl: 'mock://checkins/06-21.jpg' },
+        { date: '06-22', minutes: 0, hasCheckin: false, imageUrl: null }
     ];
 
     let nodes = structuredClone(initialNodes);
@@ -254,7 +254,7 @@
                 </div>
                 <button onclick="settle('${task.id}')">结算</button>
             </div>
-        `).join('') || '<p class="muted">今日已全部闭环，可以上传战果照片。</p>';
+        `).join('') || '<p class="muted">今日已全部闭环，可以通过底部大按钮触发终极打卡随笔。</p>';
 
         document.querySelector('#tree').innerHTML = nodes.map((node) => `
             <div class="node" style="padding-left:${(node.level - 1) * 12}px">
@@ -265,7 +265,7 @@
 
         document.querySelector('#heat').innerHTML = heat.map((day) => {
             const hot = day.minutes >= 180 ? 'hot3' : day.minutes >= 90 ? 'hot2' : day.minutes > 0 ? 'hot1' : '';
-            return `<div class="cell ${hot}"><span>${day.date}</span>${day.hasArtifact ? '<span class="film">▣</span>' : ''}</div>`;
+            return `<div class="cell ${hot}"><span>${day.date}</span>${day.imageUrl ? '<span class="film">▣</span>' : ''}</div>`;
         }).join('');
 
         const total = nodes.filter((node) => node.isLeaf).length;

@@ -1,5 +1,39 @@
 # Agent Changelog
 
+## 2026-06-23
+
+### 终版 PRD 同步修正
+
+- 确认 `prd_final.md` 已成为当前权威需求文档，重点新增“首页底部固定终极打卡按钮”“打卡随笔弹窗”“`daily_checkins` 全局打卡日志”“热力月历图片标记”等终版交互与数据要求。
+- 补记进度断档：最近一次提交 `feat: prd updaye --story=000000` 只更新了 `prd_final.md`、`prd_v1.md`、`prd_v2.md`、`prd_v3.md`，未同步 `.agent/TODO.md`、`.agent/STATE.json`、`.agent/CHANGELOG.md`。
+- 当前代码仍处于首版 mock 验收完成状态：已有首页任务卡片、半屏动作结算台、双轨调度纯函数、Amber Alert、热力 mock；尚未实现终版独立 `DailyCheckinModal`、`daily_checkins` 表、随笔图片上传与底部大按钮主动打卡仪式。
+- 本次修正仅更新文档与进度状态，不改业务代码、不运行构建、不提交。
+
+### 中文规范
+
+- 后续所有 PRD、计划、进度、日志、状态、提交信息和交接说明均必须使用中文。
+- 技术名词、文件名、表名、函数名、命令名可以保留英文原文，但解释和提交描述必须使用中文。
+
+### P6 终版 PRD 实现与验收
+
+- 数据库迁移从旧 `artifacts` 调整为 `daily_checkins`，增加 `checkin_date`、`streak_days`、`memo`、`image_url` 与工作区日期唯一约束，并同步 RLS、索引和 `.agent/schema.sql` 摘要。
+- 共享类型新增 `DailyCheckin`、`CreateDailyCheckinInput`，热力图字段调整为 `hasCheckin` 与 `imageUrl`。
+- Store 新增每日打卡记录、本地持久化、连续天数计算、终极打卡保存、图片上传、L7 叶子节点修剪和 mock 模板重载能力。
+- 首页新增底部固定终极打卡按钮：任务未清空时灰色不可点击，任务清空后高亮并打开 `DailyCheckinModal`。
+- 新增 `apps/app/src/components/DailyCheckinModal.vue`，支持随笔、限 1 张图片、以后再说、保存记录和保存中反馈。
+- 仪表盘热力月历改为读取打卡记录图片标记，并展示最近打卡随笔；规划页补齐 L7 修剪与模板库克隆入口；本地 HTML harness 同步终版打卡语义。
+- 修复串行推进边界：`archived` 叶子节点视为已从拓扑调度中修剪，不再阻塞后续兄弟节点解锁，并新增核心单测覆盖。
+- 验证通过：`pnpm type-check`、`pnpm test`（8 条核心单测）、`pnpm build:h5`、`pnpm build:mp-weixin`、IDE lints。
+- 剩余真实环境风险：Supabase Auth token、Storage bucket 访问策略、微信开发者工具真机图片上传仍需用户补齐真实配置后联调。
+
+### 浏览器验收补充
+
+- 使用浏览器访问 H5 构建产物，对照 `prd_final.md` 验收首页任务流、半屏动作结算台、底部终极打卡按钮、`DailyCheckinModal`、仪表盘热力图/最近随笔、知识树 L7 修剪和模板库入口。
+- 浏览器验收发现并修复问题：复测任务结算后仍因过期 `reviews` 留在 P0 队列，导致任务无法真正清空。修复为结算后更新该节点下一次复测时间，避免同日重复派发。
+- 修复后重新浏览器验收通过：P0 复测结算后消失，剩余任务清空后底部按钮变为 `已完成今日所有任务，去打卡`，保存随笔后显示 `今日已打卡，连续 1 天`。
+- 仪表盘浏览器验收通过：最近打卡随笔出现本次验收文本，热力月历展示图片标记，燃尽进度展示 `3/3`。
+- 知识树浏览器验收通过：L7 叶子可移入回收站并变为 `archived`，模板库按钮可重新载入官方 mock 模板。
+
 ## 2026-06-22
 
 ### 初始化决策

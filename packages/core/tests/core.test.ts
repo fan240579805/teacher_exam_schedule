@@ -90,6 +90,13 @@ describe('dispatcher', () => {
         expect(canUnlockCandidate(second, [first, second])).toBe(true);
         expect(canUnlockCandidate(second, [{ ...first, status: 'available' }, second])).toBe(false);
     });
+
+    it('treats archived previous leaves as pruned from serial locks', () => {
+        const first = node({ id: 'first', parentId: 'parent', status: 'archived', orderIndex: 1 });
+        const second = node({ id: 'second', parentId: 'parent', status: 'locked', orderIndex: 2 });
+
+        expect(canUnlockCandidate(second, [first, second])).toBe(true);
+    });
 });
 
 describe('ebbinghaus and quota', () => {
