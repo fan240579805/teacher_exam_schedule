@@ -17,6 +17,15 @@
 - **兼容性**：正确率环用 conic-gradient 内联样式（H5 验证渲染正确），中心百分比文字为信息主源；`.sheet` 加 `max-height:86vh + overflow-y:auto` 适配加长内容。
 - **验证**：`pnpm type-check`、IDE lints、`pnpm build:h5`、`pnpm build:mp-weixin` 全过；H5 浏览器走查：分段切换、错题改 5→正确率环 50% 变红、智能提示联动、标签、标记完成并闭环（进度 0/6→1/7）均正常。
 - **PRD 同步**：[prd_final.md](prd_final.md) 新增「六、v7.0 增量需求 — 首页『动作结算』弹窗重设计」章节，并在 §二核心组件 1 处加最新实现跳转提示。
+- **用户验收通过并提交**（commit `5ab7f62`）。
+
+### skills 跨机复用：仅纳入 skills-lock.json
+
+- 背景：自定义 skills 实体在上级 `aigc/.agents/skills/`（10 个，共 2.1M，其中 `ui-ux-pro-max` 占 1.8M CSV），由 `aigc/skills-lock.json` 锁定来源；其他机器若只 clone 本子仓库会拿不到。
+- 冲突机制澄清：`.agents/skills` 按目录层级就近优先加载，仓库内同名 skill 覆盖上级同名版本，不会真正冲突；两份同源（同 hash）行为一致。
+- 决策（用户选定）：**不把 skills 实体入库**（避免 2.1M 第三方 CSV 撑大业务仓库 + 版本漂移），只把 `skills-lock.json` 拷到仓库根作为可信来源。其他机器拿到 lock 后用对应 skills 管理器按 `source`/`skillPath`/`computedHash` 恢复到本地 `.agents/skills`。
+- 本机继续使用上级 `aigc/.agents/skills`，与本决策无冲突。
+- 已校验仓库内 `skills-lock.json` 与上级源 JSON 完全一致。
 
 ---
 

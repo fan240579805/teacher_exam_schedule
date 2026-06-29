@@ -178,3 +178,9 @@
 - [x] 同步更新 `prd_final.md`（新增「六、v7.0 增量需求 — 动作结算弹窗重设计」+ §二跳转提示）。
 - [x] 用户验收通过并提交；智能提示栏文案暂定保留中性「智能提示」，如需改回「AI 洞察」再单独调整。
 - [ ] 待办：更新 `harness/playwright-verify.mjs` 中与结算弹窗相关的断言（原基于 picker，现已改 segment + 量化框 + 正确率环）。
+
+## P12 skills 跨机复用
+
+- [x] 澄清冲突机制：`.agents/skills` 就近优先加载，仓库内同名覆盖上级同名，不会真冲突。
+- [x] 按用户决策仅把 `skills-lock.json` 拷到仓库根（不入库 2.1M skills 实体），校验与上级源一致。
+- [ ] 待办（其他机器侧）：clone 本仓库后用 skills 管理器按 `skills-lock.json` 恢复 `.agents/skills` 实体。
