@@ -184,3 +184,13 @@
 - [x] 澄清冲突机制：`.agents/skills` 就近优先加载，仓库内同名覆盖上级同名，不会真冲突。
 - [x] 按用户决策仅把 `skills-lock.json` 拷到仓库根（不入库 2.1M skills 实体），校验与上级源一致。
 - [ ] 待办（其他机器侧）：clone 本仓库后用 skills 管理器按 `skills-lock.json` 恢复 `.agents/skills` 实体。
+
+## P13 多 agent 跨设备 skills 安装机制
+
+让 Cursor / Claude Code / CodeBuddy 共用一套 skills，并支持按 lock 跨设备安装。
+
+- [x] 新增 `scripts/install-skills.mjs`（零依赖，按 lock 从 GitHub 拉 SKILL.md，分发到 .agents/.cursor/.claude/.codebuddy 四目录，支持 --targets/--ref/--dry-run + hash 校验）。
+- [x] 新增根 `AGENTS.md`（通用入口）与 `CLAUDE.md`（Claude Code 入口）。
+- [x] `package.json` 加 `skills:install` 脚本；`.gitignore` 忽略四个派生 skills 目录（不误伤 .cursor/rules）。
+- [x] 本机验证：`node --check`、`--dry-run`（10 skill URL/目录/四目标正确）、JSON 合法、`git check-ignore` 通过。
+- [ ] 待办（有网设备）：`pnpm skills:install` 实跑确认 GitHub 拉取与各 agent 识别；按需补齐 ui-ux-pro-max 等附属大文件。

@@ -27,6 +27,15 @@
 - 本机继续使用上级 `aigc/.agents/skills`，与本决策无冲突。
 - 已校验仓库内 `skills-lock.json` 与上级源 JSON 完全一致。
 
+### 多 agent 跨设备 skills 安装机制
+
+- 目标：让 Cursor / Claude Code / CodeBuddy 都认同一套 skills，且其他设备 clone 后可按 `skills-lock.json` 安装。
+- 新增 [scripts/install-skills.mjs](scripts/install-skills.mjs)：零依赖 Node 18+ 脚本，读 lock → 按 `https://raw.githubusercontent.com/{source}/{ref}/{skillPath}` 拉取每个 `SKILL.md` → 分发到 `.agents/skills/`、`.cursor/skills/`、`.claude/skills/`、`.codebuddy/skills/`。支持 `--targets` / `--ref` / `--dry-run`；可选 sha256 校验 hash（不一致仅告警）；目录名取 skillPath 父目录（`uniapp说明`→`uniapp`）。
+- 新增根 [AGENTS.md](AGENTS.md)（Cursor/Claude Code 通用入口：项目简介 + 红线 + skills 安装表 + 校验命令）与 [CLAUDE.md](CLAUDE.md)（指向 AGENTS.md + 安装步骤）。
+- `package.json` 新增 `skills:install` 脚本；`.gitignore` 忽略 `.agents/skills/`、`.cursor/skills/`、`.claude/skills/`、`.codebuddy/skills/`（派生实体不入库，仅保留 lock + 脚本 + 入口），且不影响已入库的 `.cursor/rules`。
+- 验证：`node --check` 通过、`--dry-run` 正确解析 10 个 skill 的 URL/目录/四目标、`package.json` JSON 合法、`git check-ignore` 确认四目录被忽略而 `.cursor/rules` 仍跟踪。
+- 限制：本机隔离环境无外网，真实 GitHub 拉取需在有网设备验证；lock 仅含 `SKILL.md`，附属大文件（ui-ux-pro-max CSV 等）不在 lock 内、需另行补齐。
+
 ---
 
 ## 2026-06-24

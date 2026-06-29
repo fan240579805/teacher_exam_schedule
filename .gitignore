@@ -21,3 +21,10 @@ supabase/.temp/
 
 # Playwright 验收截图产物（每次运行会重新生成，无需入库）
 harness/verify-shots/
+
+# Skills 实体由 skills-lock.json 按需安装（scripts/install-skills.mjs），不入库
+# 只忽略派生的 skills 目录，保留 .cursor/rules 等已入库配置
+.agents/skills/
+.cursor/skills/
+.claude/skills/
+.codebuddy/skills/

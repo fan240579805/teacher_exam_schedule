@@ -12,7 +12,8 @@
         "type-check": "pnpm -r type-check",
         "test": "pnpm --filter @teacher-exam/core test",
         "harness:html": "python3 -m http.server 4174 --directory harness/html-preview",
-        "harness:ebbinghaus": "pnpm --filter @teacher-exam/core harness:ebbinghaus"
+        "harness:ebbinghaus": "pnpm --filter @teacher-exam/core harness:ebbinghaus",
+        "skills:install": "node scripts/install-skills.mjs"
     },
     "devDependencies": {
         "playwright": "^1.61.0",
