@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BookNode, KnowledgeNode, ReviewState } from '@teacher-exam/types';
 import {
+    analyzeDrillMock,
     buildBookTree,
     buildTree,
     calculateQuota,
@@ -10,6 +11,7 @@ import {
     generateTodayTasks,
     getHomepageNodes,
     isReviewDue,
+    isWrittenComplete,
     nextOrderIndex,
     nextReviewDate,
     settleObjective,
@@ -144,6 +146,48 @@ function bookNode(partial: Partial<BookNode>): BookNode {
         ...partial
     };
 }
+
+describe('interview drill (双轨调度 + mock 分析)', () => {
+    const writtenLeaf = (id: string, status: KnowledgeNode['status']) => node({ id, status, track: 'written', orderIndex: 1 });
+    const interviewLeaf = (id: string, status: KnowledgeNode['status']) => node({ id, status, track: 'interview', orderIndex: 1 });
+
+    it('isWrittenComplete 仅看笔试叶子是否全部 done/archived', () => {
+        expect(isWrittenComplete([writtenLeaf('w1', 'done'), interviewLeaf('i1', 'available')])).toBe(true);
+        expect(isWrittenComplete([writtenLeaf('w1', 'available')])).toBe(false);
+        expect(isWrittenComplete([writtenLeaf('w1', 'done'), writtenLeaf('w2', 'archived')])).toBe(true);
+    });
+
+    it('串行模式下笔试未完成时不派发面试任务', () => {
+        const nodes = [
+            node({ id: 'w1', status: 'available', track: 'written', orderIndex: 1 }),
+            node({ id: 'i1', status: 'available', track: 'interview', orderIndex: 2 })
+        ];
+        const serial = generateTodayTasks({ nodes, reviews: [], now, interviewMode: 'serial' });
+        expect(serial.some((task) => task.node.id === 'i1')).toBe(false);
+
+        const parallel = generateTodayTasks({ nodes, reviews: [], now, interviewMode: 'parallel' });
+        expect(parallel.some((task) => task.node.id === 'i1')).toBe(true);
+    });
+
+    it('interviewEnabled=false 时面试任务完全不进调度', () => {
+        const nodes = [node({ id: 'i1', status: 'available', track: 'interview', orderIndex: 1 })];
+        const tasks = generateTodayTasks({ nodes, reviews: [], now, interviewEnabled: false });
+        expect(tasks).toHaveLength(0);
+    });
+
+    it('analyzeDrillMock 确定性输出且对超短录音判 review', () => {
+        const input = { durationSeconds: 330, drillType: 'structured' as const, nodeTitle: '《静夜思》试讲' };
+        const a = analyzeDrillMock(input);
+        const b = analyzeDrillMock(input);
+        expect(a).toEqual(b);
+        expect(a.scores.timing).toBeGreaterThanOrEqual(30);
+        expect(a.scores.timing).toBeLessThanOrEqual(99);
+
+        const tooShort = analyzeDrillMock({ durationSeconds: 20, drillType: 'structured' as const, nodeTitle: '《静夜思》试讲' });
+        expect(tooShort.hasFramework).toBe(false);
+        expect(tooShort.verdict).toBe('review');
+    });
+});
 
 describe('book mind map', () => {
     it('builds nested tree ordered by orderIndex', () => {

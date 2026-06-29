@@ -52,6 +52,23 @@
                         </view>
                     </view>
                 </view>
+                <view class="list-item">
+                    <text class="item-label">面试演练模块</text>
+                    <view class="item-right">
+                        <button class="toggle-pill interview-toggle" :class="{ on: store.interviewEnabled }" @click.stop="toggleInterview">
+                            {{ store.interviewEnabled ? '已开启' : '已关闭' }}
+                        </button>
+                    </view>
+                </view>
+                <view v-if="store.interviewEnabled" class="list-item">
+                    <text class="item-label">笔试 / 面试双轨</text>
+                    <view class="item-right">
+                        <view class="track-mode-control">
+                            <text class="track-opt" :class="{ active: store.interviewTrackMode === 'parallel' }" @click.stop="store.setInterviewTrackMode('parallel')">并行</text>
+                            <text class="track-opt" :class="{ active: store.interviewTrackMode === 'serial' }" @click.stop="store.setInterviewTrackMode('serial')">串行</text>
+                        </view>
+                    </view>
+                </view>
             </view>
         </view>
 
@@ -127,6 +144,11 @@ const syncText = computed(() => store.cloudSyncStatus === 'synced' ? '云端数�
 function adjustCap(delta: number) {
     const next = Math.min(Math.max(store.dailyTaskCapHours + delta, 2), 12);
     store.dailyTaskCapHours = next;
+}
+
+function toggleInterview() {
+    store.setInterviewEnabled(!store.interviewEnabled);
+    uni.showToast({ title: store.interviewEnabled ? '面试演练已开启' : '面试演练已关闭', icon: 'none' });
 }
 
 function onSwitchTarget() {
@@ -479,6 +501,51 @@ function onAbout() {
     background: #0f766e !important;
     color: #fff !important;
     line-height: 60rpx;
+}
+
+/* 面试开关 + 双轨模式 */
+.toggle-pill {
+    padding: 0 24rpx !important;
+    height: 56rpx;
+    border: 2rpx solid #d1d5db !important;
+    border-radius: 999rpx;
+    background: #f3f4f6 !important;
+    color: #6b7280 !important;
+    font-size: 22rpx;
+    font-weight: 700;
+    line-height: 52rpx;
+}
+
+.toggle-pill::after {
+    display: none;
+    border: none;
+}
+
+.toggle-pill.on {
+    border-color: #0f766e !important;
+    background: #0f766e !important;
+    color: #fff !important;
+}
+
+.track-mode-control {
+    display: flex;
+    padding: 4rpx;
+    border-radius: 999rpx;
+    background: #f3f4f6;
+}
+
+.track-opt {
+    padding: 8rpx 24rpx;
+    border-radius: 999rpx;
+    color: #6b7280;
+    font-size: 24rpx;
+    font-weight: 600;
+}
+
+.track-opt.active {
+    background: #fff;
+    color: #0f766e;
+    box-shadow: 0 4rpx 12rpx rgba(15, 118, 110, 0.12);
 }
 
 /* 危险按钮 */

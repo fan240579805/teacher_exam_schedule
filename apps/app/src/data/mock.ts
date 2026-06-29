@@ -67,7 +67,22 @@ export const mockNodes: KnowledgeNode[] = [
     node({ id: 'c-ethic-1', parentId: 'b-ethic', level: 4, title: '第一编 师德规范', isLeaf: false, orderIndex: 1, status: 'available' }),
     node({ id: 'u-ethic-1', parentId: 'c-ethic-1', level: 5, title: '第一章 十项准则', isLeaf: false, orderIndex: 1, status: 'available' }),
     node({ id: 's-ethic-1', parentId: 'u-ethic-1', level: 6, title: '第一节 红线条款', isLeaf: false, orderIndex: 1, status: 'available' }),
-    node({ id: 'leaf-ethic-1', parentId: 's-ethic-1', level: 7, title: '十项准则一字背诵清单', isLeaf: true, orderIndex: 1, status: 'available', estimatedMinutes: 30, frequencyWeight: 1, trapMemo: '材料分析题首选援引' })
+    node({ id: 'leaf-ethic-1', parentId: 's-ethic-1', level: 7, title: '十项准则一字背诵清单', isLeaf: true, orderIndex: 1, status: 'available', estimatedMinutes: 30, frequencyWeight: 1, trapMemo: '材料分析题首选援引' }),
+
+    // ========== 模块四：面试演练（track=interview，点击唤起音频结算台 V2） ==========
+    node({ id: 'm-interview', parentId: 'target', level: 2, title: '面试演练', isLeaf: false, orderIndex: 4, allocatedDays: 20, status: 'available', track: 'interview' }),
+
+    // L3 结构化
+    node({ id: 'g-structured', parentId: 'm-interview', level: 3, title: '结构化', isLeaf: false, orderIndex: 1, status: 'available', track: 'interview' }),
+    node({ id: 'sc-structured-1', parentId: 'g-structured', level: 4, title: '班级突发事件处理', isLeaf: false, orderIndex: 1, status: 'available', track: 'interview' }),
+    node({ id: 'drill-struct-1', parentId: 'sc-structured-1', level: 5, title: '学生当堂顶撞老师如何处理', isLeaf: true, orderIndex: 1, status: 'available', estimatedMinutes: 5, frequencyWeight: 1, track: 'interview', drillType: 'structured', trapMemo: '点题-析题-总结，最后回扣师德' }),
+    node({ id: 'drill-struct-2', parentId: 'sc-structured-1', level: 5, title: '家长质疑分班不公如何沟通', isLeaf: true, orderIndex: 2, status: 'locked', estimatedMinutes: 5, frequencyWeight: 0.9, track: 'interview', drillType: 'structured' }),
+
+    // L3 试讲
+    node({ id: 'g-lecture', parentId: 'm-interview', level: 3, title: '试讲', isLeaf: false, orderIndex: 2, status: 'available', track: 'interview' }),
+    node({ id: 'sc-lecture-1', parentId: 'g-lecture', level: 4, title: '小学语文', isLeaf: false, orderIndex: 1, status: 'available', track: 'interview' }),
+    node({ id: 'drill-lecture-1', parentId: 'sc-lecture-1', level: 5, title: '《静夜思》古诗试讲', isLeaf: true, orderIndex: 1, status: 'available', estimatedMinutes: 8, frequencyWeight: 1, track: 'interview', drillType: 'lecture', trapMemo: '导入-新授-练习-小结，板书要有诗题与作者' }),
+    node({ id: 'drill-lecture-2', parentId: 'sc-lecture-1', level: 5, title: '《富饶的西沙群岛》片段试讲', isLeaf: true, orderIndex: 2, status: 'locked', estimatedMinutes: 8, frequencyWeight: 0.9, track: 'interview', drillType: 'lecture' })
 ];
 
 export const mockReviews: ReviewState[] = [

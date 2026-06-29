@@ -122,7 +122,7 @@
         <!-- 4. 面试能力雷达图（CSS 五维雷达） -->
         <view class="card">
             <text class="card-title">面试能力雷达</text>
-            <text class="desc">基于已掌握考点估算，越向外圈越成熟。</text>
+            <text class="desc">{{ store.drillRuns.length > 0 ? '来自最近一次 AI 演练质检的客观评分。' : '完成一次面试演练后，将自动替换为 AI 客观评分。' }}</text>
             <view class="radar-wrap">
                 <view class="radar-bg" />
                 <view class="radar-bg radar-bg-2" />

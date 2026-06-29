@@ -14,6 +14,11 @@
                 <text class="history">历史记录</text>
             </view>
 
+            <view v-if="aiComment" class="ai-comment-card">
+                <text class="ai-comment-icon">✨</text>
+                <text class="ai-comment-text">今日 AI 点评：{{ aiComment }}</text>
+            </view>
+
             <textarea
                 v-model="memo"
                 class="memo-input"
@@ -44,6 +49,7 @@ defineProps<{
     workspaceTitle: string;
     streakDays: number;
     saving: boolean;
+    aiComment?: string;
 }>();
 
 const emit = defineEmits<{
@@ -149,6 +155,27 @@ function submit() {
 .upload-tip {
     color: #6b7280;
     font-size: 24rpx;
+}
+
+.ai-comment-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12rpx;
+    margin-top: 20rpx;
+    padding: 22rpx;
+    border-radius: 22rpx;
+    background: #f0fdfa;
+}
+
+.ai-comment-icon {
+    font-size: 26rpx;
+}
+
+.ai-comment-text {
+    flex: 1;
+    color: #0f766e;
+    font-size: 24rpx;
+    line-height: 1.5;
 }
 
 .memo-input {

@@ -412,3 +412,80 @@ pnpm --filter @teacher-exam/app run build:mp-weixin  # OK
 H5 浏览器逐功能走查通过：分段切换、错题数改 5 → 正确率环 50% 变红、智能提示联动、快捷标签追加去重、标记完成并闭环（进度 0/6 → 1/7）。
 
 > **遗留待办**：`harness/playwright-verify.mjs` 中与结算弹窗相关的断言仍基于旧 `picker` 结构，需同步升级为 segment + 量化框 + 正确率环（本次未改 Playwright 脚本）。
+
+---
+
+## 七、 v8.0 增量需求 — 面试演练：音频录制 + AI 结构化质检
+
+> 本章整合 P14 阶段需求：在「不碰内置内容」红线下引入**音频流 + AI 分析**——用户自己产出演练内容，AI 只做客观解构与质检。
+>
+> **实现边界（重要）**：本期按"前端 + mock AI"落地，可通过 `playwright-verify` 与小程序编译验收；真实的音频上传 / STT / LLM / Supabase Edge Functions 这条云端管线为**架构设计 + 预留接口**，待有网有 key 的环境接入。前端所有 AI 结果由本地 `analyzeDrillMock` 纯函数产出，结构与真实 LLM 返回的 JSON 完全一致，未来只需替换数据源。
+
+### 7.1 调度引擎改造：双轨并行 / 串行
+
+- **任务分轨**：`KnowledgeNode` 新增可选字段 `track: 'written' | 'interview'`（缺省 `written`）。面试技能树是一棵 `track='interview'` 的独立 L2 子树。
+- **工作区设置项**（落在 Tab 4「我的 · 复习计划管理」）：
+  - 面试模块开关 `interviewEnabled`：关闭时面试子树完全不进调度。
+  - 双轨模式 `interviewTrackMode`：
+    - **并行（parallel）**：笔试 L2 与面试 L2 各算独立 Quota，今日任务流同时排笔试 + 面试课题。
+    - **串行（serial）**：面试 L2 被笔试锁死，只有当全部笔试叶子达到 `done` 才解锁面试课题。
+- **算法**：`generateTodayTasks` 增加可选 `interviewMode` / `interviewEnabled` 入参；串行且笔试未全部完成时过滤掉 `track==='interview'` 的任务。新增纯函数 `isWrittenComplete(nodes)`，附单测。
+
+### 7.2 面试技能树拓扑（预埋模板）
+
+- **L2 大类**：结构化 / 试讲 / 说课 / 答辩。
+- **L3 细分场景**：如「小学语文」「特殊教育教研」「班级突发事件处理」。
+- **L4 具体演练课题（叶子，进调度池）**：如特殊教育下「超市购物教具演示流程」「家长会沟通演练」；小学语文下「《静夜思》试讲」。
+- 复用现有七层邻接表与串行推进锁，作为官方可一键克隆的模板。
+
+### 7.3 核心组件：AI 音频结算台 V2（`components/DrillActionSheet.vue`）
+
+由首页 `track==='interview'` 的任务卡片唤起（笔试任务仍走 v7.0 的刷题/背诵/学习输入结算台）。
+
+- **前端录音**：界面主体是一个巨大的麦克风按钮「按住/点击 开始演练」，调用 `uni.getRecorderManager()` 录音并计时；H5 端无录音权限时降级为 mock 计时，不阻断流程。演练结束点「提交」，音频直传 Supabase Storage（mock 模式下跳过真实上传）。
+- **AI 客观解构（结果卡片）**：强制结构化 JSON（本期由 `analyzeDrillMock` 产出，字段与真实 LLM 一致），客观提取四项：
+  - **耗时把控**：总时长统计。
+  - **流畅度**：废话 / 口头禅（"然后""那个"…）出现频次。
+  - **逻辑骨架**：结构化是否含「点题-析题-总结」；试讲是否含「导入-新授-练习-小结」。
+  - **踩分点遗漏**：针对该课题提取核心要素是否缺失。
+- **结算闭环**：AI 分析完成后结果卡片直接返回首页；若无致命逻辑遗漏且口头禅未超标，系统自动亮绿灯把该节点标 `done`、划线消失（`verdict='pass'`）；否则提示需复盘（`verdict='review'`）。
+
+### 7.4 后端音频 + AI 管线架构（预留，采用 Edge Functions + 异步）
+
+> 经确认采用 **Supabase Edge Functions（Serverless）+ 异步轮询/订阅**，而非常驻中转服务，运维最轻。
+
+1. 客户端 `uni.uploadFile` 把音频传到 Storage `drills/{workspace}/{node}/{ts}.mp3`。
+2. Storage 落库触发 Edge Function：调用 STT（语音转文本）。
+3. 转写文本 + 预设「结构化评分 Prompt」投喂 LLM，强制返回结构化 JSON。
+4. 结果写入 `drill_runs` 表；客户端通过轮询或 Supabase Realtime 订阅拿到结果后渲染结果卡片。
+5. 长耗时不阻塞客户端：提交后即返回"分析中"，结果异步回填。
+- 预留数据表（待迁移）：`drill_runs(id, workspace_id, node_id, drill_type, audio_url, transcript, result_json, verdict, created_at)`。
+
+### 7.5 数据面板升级（Tab 3 统计）
+
+- **面试雷达图客观化**：五维（时间把控 / 语言流畅 / 板书完整 / 教态 / 逻辑框架）数据源从"用户主观自评"改为"AI 质检沉淀的 JSON payload"。store `interviewRadar` 优先取最近 `DrillRun.result.scores`，无演练记录时回退既有推导。
+- **战果存库**：终极打卡弹窗除随笔 + 图片外，附带当天 AI 给出的"最犀利的一句点评"（store `latestDrillComment`）。
+
+### 7.6 类型与 store（前端，零侵入既有 ActionType / settlement）
+
+| 新增 | 说明 |
+|---|---|
+| `KnowledgeNode.track?` | `'written' \| 'interview'`，缺省 written |
+| `DrillType` | `'structured' \| 'lecture' \| 'presentation' \| 'defense'` |
+| `AiDrillResult` | `durationSeconds / fillerCount / hasFramework / missingPoints / scores(5维) / verdict / comment` |
+| `DrillRun` | `id / nodeId / drillType / result / createdAt`，存 store，不塞进 actionLogs |
+| store `interviewEnabled` / `interviewTrackMode` / `drillRuns` | 面试开关 / 双轨模式 / 演练记录 |
+| store `settleDrill(nodeId, result)` | 标记面试节点 done + 追加 drillRun + 联动雷达/点评 |
+| core `analyzeDrillMock` / `isWrittenComplete` | mock 结构化评分 + 笔试完成判定（均带单测） |
+
+### 7.7 验证
+
+```bash
+pnpm test                      # core 单测（含 analyzeDrillMock / isWrittenComplete / 双轨）
+pnpm type-check
+pnpm build:h5
+pnpm build:mp-weixin
+node harness/playwright-verify.mjs
+```
+
+> **遗留待办（有网有 key 的环境）**：实现 `drill_runs` 迁移 + STT/LLM Edge Function + Realtime 订阅，把 `analyzeDrillMock` 换成真实管线；并补齐前轮遗留的 playwright 结算弹窗断言升级。

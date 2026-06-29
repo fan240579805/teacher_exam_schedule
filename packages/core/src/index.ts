@@ -1,4 +1,5 @@
 export * from './dispatch';
+export * from './drill';
 export * from './ebbinghaus';
 export * from './library';
 export * from './quota';

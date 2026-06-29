@@ -194,3 +194,18 @@
 - [x] `package.json` 加 `skills:install` 脚本；`.gitignore` 忽略四个派生 skills 目录（不误伤 .cursor/rules）。
 - [x] 本机验证：`node --check`、`--dry-run`（10 skill URL/目录/四目标正确）、JSON 合法、`git check-ignore` 通过。
 - [ ] 待办（有网设备）：`pnpm skills:install` 实跑确认 GitHub 拉取与各 agent 识别；按需补齐 ui-ux-pro-max 等附属大文件。
+
+## P14 面试演练：音频 + AI 结构化质检（前端 mock 落地）
+
+范围已与用户确认：前端 + mock AI（过 playwright + 小程序编译）；真实 STT/LLM/Edge Functions 写 PRD + 预留接口（Edge Functions + 异步）。
+
+- [x] PRD 新增「七、v8.0」章节。
+- [x] 类型：`KnowledgeNode.track?`、`DrillType`、`AiDrillResult`、`DrillRun`。
+- [x] core：`analyzeDrillMock`、`isWrittenComplete`、`generateTodayTasks` 接 `interviewMode/interviewEnabled` + 4 组单测（10→14）。
+- [x] mock：面试技能树 L2 子树（结构化/试讲 → 场景 → 课题叶子，track=interview）。
+- [x] store：`interviewEnabled/interviewTrackMode/drillRuns/settleDrill`、`interviewRadar` 接 drill payload、`latestDrillComment`、todayTasks 接双轨参数；笔试统计排除面试节点。
+- [x] UI：`components/DrillActionSheet.vue`（麦克风录音→提交→mock AI 结果卡片→自动闭环）+ 首页按 `track` 唤起。
+- [x] UI：profile 面试开关 + 双轨模式切换；打卡弹窗展示 AI 点评；dashboard 雷达接 AI payload 文案。
+- [x] 验证：`pnpm test`(14)、`type-check`、`build:h5`、`build:mp-weixin`、`playwright-verify` **83/83**。
+- [x] 提交并 push。
+- [ ] 待办（有网有 key 环境）：实现 `drill_runs` 迁移 + STT/LLM Edge Function + Realtime 订阅，把 `analyzeDrillMock` 换成真实管线；补齐前轮遗留的 playwright 结算弹窗 picker→segment 断言。

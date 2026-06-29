@@ -1,6 +1,22 @@
 # Agent Changelog
 
-## 2026-06-29
+## 2026-06-29 (晚续) — P14 面试演练：音频 + AI 质检（前端 mock 落地）
+
+按用户两张 v8.0 截图需求落地。**范围已与用户确认**：前端 + mock AI（可过 playwright + 小程序编译）；真实 STT/LLM/Edge Functions 写进 PRD 并预留接口（架构选 Edge Functions + 异步轮询）。
+
+- **PRD**：[prd_final.md](prd_final.md) 新增「七、v8.0 — 面试演练：音频录制 + AI 结构化质检」章节（双轨调度 / 面试技能树 / AI 音频结算台 V2 / Edge 异步管线 / 客观雷达 / AI 点评 / 实现边界 / 验证）。
+- **类型**（零侵入既有 ActionType/settlement）：`KnowledgeNode.track?`、`DrillType`、`AiDrillResult`、`DrillRadarScores`、`DrillRun`、`AnalyzeDrillInput`。
+- **core**：新增 `packages/core/src/drill.ts`（`analyzeDrillMock` 确定性 mock 质检 + `isWrittenComplete` + `frameworkHint`）；`generateTodayTasks` 增 `interviewEnabled/interviewMode` 入参做双轨过滤；新增 4 组单测（core 单测 10→14）。
+- **mock**：新增「面试演练」L2 子树（结构化/试讲 → 场景 → 课题叶子，`track=interview`、带 `drillType`）。
+- **store**：新增 `interviewEnabled/interviewTrackMode/drillRuns/latestDrillComment` + `settleDrill/setInterviewEnabled/setInterviewTrackMode`；`interviewRadar` 优先取最近一次 AI 演练分数；`masteredCount/totalLeafCount/moduleBurndown` 排除面试节点，保证笔试统计不被污染；`todayTasks` 接双轨参数。
+- **组件**：新增 `components/DrillActionSheet.vue`（🎙️ 麦克风录音计时 → 结束并提交 → 模拟 AI 异步分析 → 结果卡片：四项客观指标 + AI 点评 + 达标/复盘结论 + 自动闭环）；首页按 `track` 唤起：面试任务进音频结算台、笔试任务进 v7.0 刷题结算台；面试卡片带 🎙️ 标识。
+- **辅助 UI**：`profile` 复习计划管理新增「面试演练模块」开关 + 「笔试/面试双轨」并行/串行切换；`DailyCheckinModal` 新增 AI 点评卡片（战果存库）；`dashboard` 雷达副标题随是否有演练记录切换文案。
+- **Playwright**：脚本扩到 **83/83**（新增面试卡片识别、音频结算台录音→提交→结果卡片四指标/点评/结论、打卡弹窗 AI 点评、profile 面试开关+双轨切换；并把单项结算选择器从已废弃的 `.form-row input` 升级为 P11 的 `.metric-input input`，关面试模块后再清空任务以避免死循环）。
+- **验证全绿**：`pnpm test`（14）、`pnpm type-check`、`pnpm build:h5`、`pnpm build:mp-weixin`、`node harness/playwright-verify.mjs` **83/83**。
+- **实现边界**：真实 STT/LLM/Edge Functions/`drill_runs` 表为 PRD 预留（Edge Functions + 异步轮询），本期 AI 结果由 `analyzeDrillMock` 产出，结构与真实 LLM 一致，未来替换数据源即可。
+- 注：环境缺 `playwright` 包，已 `pnpm install` + `npx playwright install chromium` 恢复后再跑验收。
+
+
 
 ### P11 首页「动作结算」弹窗重设计（参照效果图）
 

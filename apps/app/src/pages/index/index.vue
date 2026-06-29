@@ -30,9 +30,12 @@
             <text>{{ store.todayTasks.length }} 项</text>
         </view>
 
-        <view v-for="task in store.todayTasks" :key="task.node.id" class="task-card" @click="openSheet(task.node.id)">
+        <view v-for="task in store.todayTasks" :key="task.node.id" class="task-card" :class="{ 'is-drill': task.node.track === 'interview' }" @click="openSheet(task.node.id)">
             <view>
-                <text class="task-priority">{{ task.priority }} · {{ task.reason === 'review' ? '复习' : '新学' }}</text>
+                <text class="task-priority">
+                    <text v-if="task.node.track === 'interview'" class="drill-tag">🎙️ 面试演练</text>
+                    {{ task.priority }} · {{ task.reason === 'review' ? '复习' : '新学' }}
+                </text>
                 <text class="task-title">{{ task.node.title }}</text>
                 <text v-if="task.node.trapMemo" class="memo">小提醒：{{ task.node.trapMemo }}</text>
             </view>
@@ -166,11 +169,18 @@
             </button>
         </view>
 
+        <DrillActionSheet
+            v-if="drillNode"
+            :node="drillNode"
+            @close="closeDrill"
+        />
+
         <DailyCheckinModal
             v-if="showCheckinModal"
             :workspace-title="store.workspace.title"
             :streak-days="store.currentStreakDays"
             :saving="savingCheckin"
+            :ai-comment="store.latestDrillComment"
             @close="closeCheckin"
             @save="saveCheckin"
         />
@@ -181,6 +191,7 @@
 import { computed, reactive, ref } from 'vue';
 import type { ActionType, CreateDailyCheckinInput } from '@teacher-exam/types';
 import DailyCheckinModal from '../../components/DailyCheckinModal.vue';
+import DrillActionSheet from '../../components/DrillActionSheet.vue';
 import { useStudyStore } from '../../stores/study';
 
 const store = useStudyStore();
@@ -206,8 +217,10 @@ const comprehensive = reactive({ durationMinutes: 30, scorePoints: 80 });
 const showCheckinModal = ref(false);
 const savingCheckin = ref(false);
 
+const drillNodeId = ref('');
 const actionType = computed(() => actionTypes[actionIndex.value]);
 const activeNode = computed(() => store.nodes.find((node) => node.id === activeNodeId.value));
+const drillNode = computed(() => store.nodes.find((node) => node.id === drillNodeId.value) ?? null);
 const quickTags = computed(() => tagPresets[actionType.value]);
 const blockLabel = computed(() => {
     if (actionType.value === 'objective') {
@@ -330,7 +343,17 @@ function levelLabel(level: 'none' | 'watch' | 'amber' | 'red') {
 }
 
 function openSheet(nodeId: string) {
+    const node = store.nodes.find((item) => item.id === nodeId);
+    // 面试演练任务唤起 AI 音频结算台；笔试任务走刷题/背诵/学习输入结算台。
+    if (node?.track === 'interview') {
+        drillNodeId.value = nodeId;
+        return;
+    }
     activeNodeId.value = nodeId;
+}
+
+function closeDrill() {
+    drillNodeId.value = '';
 }
 
 function closeSheet() {
@@ -620,6 +643,20 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 .duration {
     color: #0f766e;
     font-weight: 700;
+}
+
+.drill-tag {
+    margin-right: 10rpx;
+    padding: 2rpx 14rpx;
+    border-radius: 999rpx;
+    background: #ecfdf5;
+    color: #0f766e;
+    font-size: 20rpx;
+    font-weight: 700;
+}
+
+.task-card.is-drill {
+    box-shadow: 0 12rpx 40rpx rgba(15, 118, 110, 0.12);
 }
 
 .empty {

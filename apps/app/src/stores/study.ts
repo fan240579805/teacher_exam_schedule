@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import type { ActionType, CreateDailyCheckinInput, DailyCheckin, KnowledgeNode, SettlementPayload, StudyLog } from '@teacher-exam/types';
-import { calculateQuota, canUnlockCandidate, generateTodayTasks, settleObjective, settleRecite, settleComprehensive } from '@teacher-exam/core';
+import type { ActionType, AiDrillResult, CreateDailyCheckinInput, DailyCheckin, DrillRun, DrillType, KnowledgeNode, SettlementPayload, StudyLog } from '@teacher-exam/types';
+import { analyzeDrillMock, calculateQuota, canUnlockCandidate, generateTodayTasks, settleObjective, settleRecite, settleComprehensive } from '@teacher-exam/core';
 import { mockActionLogs, mockDailyCheckins, mockHeatmap, mockNodes, mockReviews, mockWorkspace } from '../data/mock';
 import { uploadSupabaseFile, upsertDailyCheckin } from '../services/supabase/client';
 
@@ -15,11 +15,17 @@ export const useStudyStore = defineStore('study', () => {
     const targetMinutesPerDay = ref(180);
     const dailyTaskCapHours = ref(6);
     const cloudSyncStatus = ref<'synced' | 'pending'>('synced');
+    // 面试演练（v8.0）：模块开关 + 双轨模式 + AI 演练记录。
+    const interviewEnabled = ref(true);
+    const interviewTrackMode = ref<'parallel' | 'serial'>('parallel');
+    const drillRuns = ref<DrillRun[]>([]);
 
     const todayTasks = computed(() => generateTodayTasks({
         nodes: nodes.value,
         reviews: reviews.value,
-        now: new Date()
+        now: new Date(),
+        interviewEnabled: interviewEnabled.value,
+        interviewMode: interviewTrackMode.value
     }));
 
     const amberAlert = computed(() => calculateQuota({
@@ -34,7 +40,7 @@ export const useStudyStore = defineStore('study', () => {
     // 数据源就是 nodes，因此首页结算后 done 数量自动联动这里，不需要额外推送。
     const moduleBurndown = computed(() => {
         const modules = nodes.value
-            .filter((node) => node.level === 2)
+            .filter((node) => node.level === 2 && node.track !== 'interview')
             .sort((a, b) => a.orderIndex - b.orderIndex);
 
         return modules.map((module) => {
@@ -81,9 +87,9 @@ export const useStudyStore = defineStore('study', () => {
         return Math.round((totalMinutes / activeDays.length / 60) * 10) / 10;
     });
 
-    // 已掌握考点：状态为 done 的叶子节点总数。
-    const masteredCount = computed(() => nodes.value.filter((node) => node.isLeaf && node.status === 'done').length);
-    const totalLeafCount = computed(() => nodes.value.filter((node) => node.isLeaf && node.status !== 'archived').length);
+    // 已掌握考点：状态为 done 的笔试叶子节点总数（面试演练不计入"考点"统计）。
+    const masteredCount = computed(() => nodes.value.filter((node) => node.isLeaf && node.status === 'done' && node.track !== 'interview').length);
+    const totalLeafCount = computed(() => nodes.value.filter((node) => node.isLeaf && node.status !== 'archived' && node.track !== 'interview').length);
 
     // 刷题正确率：所有 objective 动作的 (total - wrong) / total 加权平均。
     const objectiveAccuracy = computed(() => {
@@ -103,8 +109,24 @@ export const useStudyStore = defineStore('study', () => {
 
     // “备考能力雷达」5 维数据。当前由 mastered/objective 等现有资源推导，
     // 后期 interview_runs 接入后可从该表读取。
+    // 最近一次 AI 演练结果（用于雷达客观化与打卡点评）。
+    const latestDrillRun = computed(() => (drillRuns.value.length === 0 ? null : drillRuns.value[drillRuns.value.length - 1]));
+    const latestDrillComment = computed(() => latestDrillRun.value?.result.comment ?? '');
+
     const interviewRadar = computed(() => {
-        // 以完成度为基础 + 个各维度经验係数，营造差异感。
+        // v8.0：优先用最近一次 AI 演练质检的客观分数；没有演练记录时回退到完成度推导。
+        const latest = latestDrillRun.value;
+        if (latest) {
+            const s = latest.result.scores;
+            return [
+                { label: '时间把控', score: s.timing },
+                { label: '语言流畅', score: s.fluency },
+                { label: '板书完整', score: s.board },
+                { label: '教态', score: s.manner },
+                { label: '逻辑框架', score: s.logic }
+            ];
+        }
+
         const baseline = totalLeafCount.value === 0 ? 0 : Math.round((masteredCount.value / totalLeafCount.value) * 100);
         return [
             { label: '时间把控', score: Math.min(60 + Math.round(baseline * 0.4), 95) },
@@ -162,6 +184,50 @@ export const useStudyStore = defineStore('study', () => {
         scheduleNextReview(nodeId);
         appendTodayHeat(result.durationMinutes);
         persistNodes();
+    }
+
+    // v8.0：面试演练结算。传入录音时长，内部用 mock AI 分析产出结构化结果。
+    // verdict==='pass' 自动闭环该节点；'review' 仅记录不闭环（提示复盘）。
+    function settleDrill(nodeId: string, durationSeconds: number): AiDrillResult {
+        const target = nodes.value.find((node) => node.id === nodeId);
+        const drillType: DrillType = target?.drillType ?? 'structured';
+        const result = analyzeDrillMock({
+            durationSeconds,
+            drillType,
+            nodeTitle: target?.title ?? '面试演练'
+        });
+
+        drillRuns.value = [
+            ...drillRuns.value,
+            {
+                id: `drill-${nodeId}-${Date.now()}`,
+                nodeId,
+                drillType,
+                result,
+                createdAt: new Date().toISOString()
+            }
+        ];
+
+        if (result.verdict === 'pass') {
+            nodes.value = nodes.value.map((node) => (
+                node.id === nodeId
+                    ? { ...node, status: 'done', completedAt: new Date().toISOString() } as KnowledgeNode
+                    : node
+            ));
+            unlockNextSiblings();
+            appendTodayHeat(Math.max(Math.round(durationSeconds / 60), 1));
+            persistNodes();
+        }
+
+        return result;
+    }
+
+    function setInterviewEnabled(value: boolean) {
+        interviewEnabled.value = value;
+    }
+
+    function setInterviewTrackMode(mode: 'parallel' | 'serial') {
+        interviewTrackMode.value = mode;
     }
 
     async function saveDailyCheckin(input: CreateDailyCheckinInput) {
@@ -275,6 +341,7 @@ export const useStudyStore = defineStore('study', () => {
         heatmap.value = JSON.parse(JSON.stringify(mockHeatmap));
         dailyCheckins.value = JSON.parse(JSON.stringify(mockDailyCheckins));
         actionLogs.value = JSON.parse(JSON.stringify(mockActionLogs));
+        drillRuns.value = [];
         persistNodes();
         persistDailyCheckins();
     }
@@ -333,6 +400,10 @@ export const useStudyStore = defineStore('study', () => {
         targetMinutesPerDay,
         dailyTaskCapHours,
         cloudSyncStatus,
+        interviewEnabled,
+        interviewTrackMode,
+        drillRuns,
+        latestDrillComment,
         todayTasks,
         amberAlert,
         homepageNodes,
@@ -351,6 +422,9 @@ export const useStudyStore = defineStore('study', () => {
         daysUntilExam,
         archivedLeaves,
         settleTask,
+        settleDrill,
+        setInterviewEnabled,
+        setInterviewTrackMode,
         saveDailyCheckin,
         pruneLeaf,
         resetMock,

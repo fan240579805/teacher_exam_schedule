@@ -103,6 +103,12 @@ function expect(label, cond, detail = '') {
         const taskCards = await page.locator('.task-card').count();
         expect('首页今日任务卡片渲染', taskCards >= 1, `任务数=${taskCards}`);
 
+        // v8.0：面试演练任务卡片（带 🎙️ 标识）应出现在今日任务流（并行双轨默认开启）
+        const drillCards = await page.locator('.task-card.is-drill').count();
+        expect('首页存在面试演练任务卡片', drillCards >= 1, `面试卡=${drillCards}`);
+        const drillTag = await page.locator('.drill-tag').first().textContent();
+        expect('面试任务卡片带「面试演练」标识', (drillTag || '').includes('面试演练'), `tag=${drillTag}`);
+
         // 周历应该按真实日期渲染：本周一到周日，且至少有一个圆点表示打卡
         const weekDays = await page.locator('.week-day').count();
         expect('首页周历渲染 7 天', weekDays === 7, `条数=${weekDays}`);
@@ -207,16 +213,18 @@ function expect(label, cond, detail = '') {
 
         // 记录结算前任务标题集合，用于后续判断集合变化
         const titlesBefore = await page.locator('.task-card .task-title').allTextContents();
-        const firstTaskTitle = titlesBefore[0];
+        // 单项结算走「笔试」任务（非 .is-drill），保证刷题结算台 + burndown 联动可断言。
+        const writtenCard = page.locator('.task-card:not(.is-drill)').first();
+        const firstTaskTitle = await writtenCard.locator('.task-title').textContent();
 
-        await page.locator('.task-card').first().click();
+        await writtenCard.click();
         await page.waitForSelector('.sheet-title', { timeout: 5000 });
         const sheetTitle = await page.locator('.sheet-title').textContent();
         expect('结算面板标题为「完成本节」', sheetTitle?.trim() === '完成本节', `actual="${sheetTitle}"`);
 
-        // 默认是 objective（客观刷题），填一组数据
-        await page.locator('.form-row input').nth(0).fill('20');
-        await page.locator('.form-row input').nth(1).fill('3');
+        // 默认是 objective（刷题），P11 结算台用 .metric-input（uni-input 包装，取内部原生 input）
+        await page.locator('.metric-input input').nth(0).fill('20');
+        await page.locator('.metric-input input').nth(1).fill('3');
 
         // 点击「标记完成」
         await page.locator('.primary-button').click();
@@ -229,6 +237,32 @@ function expect(label, cond, detail = '') {
         expect('结算后任务集合发生变化', JSON.stringify(titlesBefore) !== JSON.stringify(titlesAfter), `before=${titlesBefore.length} after=${titlesAfter.length}`);
 
         await page.screenshot({ path: path.join(SHOTS_DIR, '3-home-after-settle.png'), fullPage: true });
+
+        // ====== 3.5 面试演练：AI 音频结算台 V2 ======
+        const drillCard = page.locator('.task-card.is-drill').first();
+        expect('结算后面试演练卡片仍在今日任务', await drillCard.count() >= 1);
+        await drillCard.click();
+        await page.waitForSelector('.drill-sheet', { timeout: 5000 });
+        const drillSheetTitle = await page.locator('.drill-sheet .sheet-title').textContent();
+        expect('面试演练唤起 AI 音频结算台（标题「AI 演练结算」）', (drillSheetTitle || '').trim() === 'AI 演练结算', `actual="${drillSheetTitle}"`);
+        expect('音频结算台有麦克风按钮', await page.locator('.mic-button').count() === 1);
+        // 开始录音 -> 计时 -> 结束并提交
+        await page.locator('.mic-button').click();
+        await page.waitForSelector('.drill-submit', { timeout: 5000 });
+        await page.waitForTimeout(1200);
+        await page.locator('.drill-submit').click();
+        // AI 分析结果卡片
+        await page.waitForSelector('.drill-result', { timeout: 5000 });
+        const metricItems = await page.locator('.drill-result .metric-item').count();
+        expect('AI 结果卡片渲染四项客观指标', metricItems === 4, `metrics=${metricItems}`);
+        const drillComment = await page.locator('.drill-comment').count();
+        expect('AI 结果卡片含一句点评', drillComment === 1, `comment=${drillComment}`);
+        const drillVerdict = await page.locator('.drill-result .verdict').count();
+        expect('AI 结果卡片含达标/复盘结论', drillVerdict === 1, `verdict=${drillVerdict}`);
+        await page.screenshot({ path: path.join(SHOTS_DIR, '9-drill-result.png'), fullPage: false });
+        // 关闭结算台
+        await page.locator('.drill-sheet .primary-button').click();
+        await page.waitForTimeout(300);
 
         // 回到仪表盘看燃尽联动
         await page.goto(`http://127.0.0.1:${port}/#/pages/dashboard/index`);
@@ -313,6 +347,16 @@ function expect(label, cond, detail = '') {
             // 仅占位：实际通过循环点击 task-card 完成所有任务来触发打卡按钮 ready 态
         });
 
+        // 清空前先到「我的」页关闭面试模块：面试演练走音频结算台、且短录音判 review 不会闭环，
+        // 留在清单里会让"逐个结算清空"循环死循环，故先关掉，只保留笔试任务用于触发打卡按钮 ready。
+        await page.goto(`http://127.0.0.1:${port}/#/pages/profile/index`);
+        await page.waitForSelector('.interview-toggle', { timeout: 5000 });
+        const toggleNow = (await page.locator('.interview-toggle').textContent() || '').trim();
+        if (toggleNow === '已开启') {
+            await page.locator('.interview-toggle').click();
+            await page.waitForTimeout(200);
+        }
+
         await page.goto(`http://127.0.0.1:${port}/#/pages/index/index`);
         await page.waitForSelector('.task-card', { timeout: 5000 });
         // H5 build 中底部 tabbar 是 fixed 定位，会遮挡任务卡片末尾和 sheet 底部按钮，
@@ -322,7 +366,7 @@ function expect(label, cond, detail = '') {
             if (tab) tab.style.display = 'none';
         });
         await page.waitForTimeout(200);
-        // 把所有任务都结算掉
+        // 把所有任务都结算掉（此时面试已关，只剩笔试任务）
         let safety = 30;
         while (safety-- > 0) {
             const cnt = await page.locator('.task-card').count();
@@ -350,6 +394,10 @@ function expect(label, cond, detail = '') {
         const laterBg = await page.locator('.later-button').evaluate((el) => getComputedStyle(el).backgroundColor);
         expect('Modal 以后再说按钮：浅灰底（#f3f4f6）', /243, 244, 246/.test(laterBg), `bg=${laterBg}`);
 
+        // v8.0 战果存库：打卡弹窗附带当天 AI 点评（前面 3.5 已产生一次演练记录）。
+        const aiCommentInModal = await page.locator('.ai-comment-card').count();
+        expect('打卡弹窗附带 AI 点评卡片', aiCommentInModal === 1, `aiComment=${aiCommentInModal}`);
+
         await page.screenshot({ path: path.join(SHOTS_DIR, '6-checkin-modal.png'), fullPage: false });
 
         // ====== 5. Tab 4 我的页验收 ======
@@ -372,6 +420,20 @@ function expect(label, cond, detail = '') {
         expect('我的页包含「问题反馈 / 吐槽」', profileBody.includes('问题反馈'));
         expect('我的页包含「关于深教考通」', profileBody.includes('关于深教考通'));
         expect('我的页包含「预留广告位」占位', profileBody.includes('预留广告位') || profileBody.includes('Ad Slot'));
+
+        // v8.0：面试演练模块开关 + 双轨模式切换
+        expect('我的页包含「面试演练模块」开关', profileBody.includes('面试演练模块'));
+        const interviewToggle = page.locator('.interview-toggle');
+        expect('面试演练开关渲染', await interviewToggle.count() === 1);
+        // 若当前已关闭（前面清空流程关过），点开后应出现「笔试 / 面试双轨」切换
+        if (((await interviewToggle.textContent()) || '').trim() === '已关闭') {
+            await interviewToggle.click();
+            await page.waitForTimeout(300);
+        }
+        const trackControl = await page.locator('.track-mode-control').count();
+        expect('开启面试后出现「笔试/面试双轨」切换', trackControl === 1, `ctrl=${trackControl}`);
+        const trackOpts = await page.locator('.track-opt').allTextContents();
+        expect('双轨切换含并行/串行两档', trackOpts.some((t) => t.includes('并行')) && trackOpts.some((t) => t.includes('串行')), `opts=${JSON.stringify(trackOpts)}`);
 
         // 倒计时数字应是 > 0 的整数
         const examDays = await page.locator('.exam-days').textContent();
