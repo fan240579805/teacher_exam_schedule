@@ -45,36 +45,117 @@
 
         <view v-if="activeNode" class="sheet-mask" @click="closeSheet">
             <view class="sheet" @click.stop>
-                <text class="sheet-title">完成本节</text>
-                <text class="sheet-subtitle">{{ activeNode.title }}</text>
-
-                <picker :range="actionLabels" @change="onActionChange">
-                    <view class="picker">当前动作：{{ actionLabels[actionIndex] }}</view>
-                </picker>
-
-                <view v-if="actionType === 'objective'" class="form-row">
-                    <input v-model.number="objective.totalCount" type="number" placeholder="总题数" />
-                    <input v-model.number="objective.wrongCount" type="number" placeholder="错题数" />
+                <view class="sheet-head">
+                    <view class="sheet-title-row">
+                        <text class="sheet-icon">🎯</text>
+                        <text class="sheet-title">完成本节</text>
+                    </view>
+                    <text class="sheet-subtitle">{{ activeNode.title }}</text>
                 </view>
 
-                <slider
-                    v-if="actionType === 'recite'"
-                    :value="reciteMastery"
-                    :min="20"
-                    :max="100"
-                    :step="30"
-                    show-value
-                    @change="onReciteChange"
-                />
-
-                <view v-if="actionType === 'comprehensive'" class="form-row">
-                    <input v-model.number="comprehensive.durationMinutes" type="number" placeholder="耗时分钟" />
-                    <input v-model.number="comprehensive.scorePoints" type="number" placeholder="踩分(0-100)" />
+                <view class="segment">
+                    <view
+                        v-for="(label, index) in actionLabels"
+                        :key="label"
+                        class="segment-item"
+                        :class="{ active: actionIndex === index }"
+                        @click="setAction(index)"
+                    >{{ label }}</view>
                 </view>
 
-                <input v-model="trapMemo" class="memo-input" placeholder="选填：记下一句避坑口诀" />
+                <view class="block">
+                    <text class="block-label">{{ blockLabel }}</text>
 
-                <button class="primary-button" @click="submitSettlement">标记完成</button>
+                    <view v-if="actionType === 'objective'" class="metric-card">
+                        <view class="metric-box">
+                            <text class="metric-name">总刷题数</text>
+                            <input
+                                v-model.number="objective.totalCount"
+                                class="metric-input"
+                                type="number"
+                                @blur="normalizeObjective"
+                            />
+                            <text class="metric-hint">本次共做多少题</text>
+                        </view>
+                        <view class="metric-box">
+                            <text class="metric-name">错题数</text>
+                            <input
+                                v-model.number="objective.wrongCount"
+                                class="metric-input danger"
+                                type="number"
+                                @blur="normalizeObjective"
+                            />
+                            <text class="metric-hint">其中做错多少题</text>
+                        </view>
+                        <view class="accuracy">
+                            <view class="ring" :style="accuracyRingStyle">
+                                <view class="ring-hole">
+                                    <text class="ring-value">{{ objectiveAccuracy }}%</text>
+                                </view>
+                            </view>
+                            <text class="accuracy-label">正确率</text>
+                        </view>
+                    </view>
+
+                    <view v-else-if="actionType === 'recite'" class="anchor-group">
+                        <view
+                            v-for="opt in reciteOptions"
+                            :key="opt.value"
+                            class="anchor"
+                            :class="{ active: reciteMastery === opt.value }"
+                            @click="reciteMastery = opt.value"
+                        >
+                            <text class="anchor-value">{{ opt.value }}%</text>
+                            <text class="anchor-label">{{ opt.label }}</text>
+                        </view>
+                    </view>
+
+                    <view v-else class="metric-card">
+                        <view class="metric-box">
+                            <text class="metric-name">耗时(分钟)</text>
+                            <input
+                                v-model.number="comprehensive.durationMinutes"
+                                class="metric-input"
+                                type="number"
+                            />
+                            <text class="metric-hint">本次有效投入</text>
+                        </view>
+                        <view class="metric-box">
+                            <text class="metric-name">踩分(0-100)</text>
+                            <input
+                                v-model.number="comprehensive.scorePoints"
+                                class="metric-input"
+                                type="number"
+                            />
+                            <text class="metric-hint">核心得分点占比</text>
+                        </view>
+                    </view>
+                </view>
+
+                <view class="block">
+                    <text class="block-label">避坑随笔</text>
+                    <textarea
+                        v-model="trapMemo"
+                        class="memo-area"
+                        :maxlength="200"
+                        placeholder="记下核心避坑口诀或感悟..."
+                    />
+                    <view class="tag-row">
+                        <text
+                            v-for="tag in quickTags"
+                            :key="tag"
+                            class="tag"
+                            @click="appendTag(tag)"
+                        >#{{ tag }}</text>
+                    </view>
+                </view>
+
+                <view class="insight">
+                    <text class="insight-icon">✨</text>
+                    <text class="insight-text">智能提示：{{ aiInsight }}</text>
+                </view>
+
+                <button class="primary-button" @click="submitSettlement">标记完成并闭环</button>
                 <button class="text-button" @click="closeSheet">取消</button>
             </view>
         </view>
@@ -103,19 +184,113 @@ import DailyCheckinModal from '../../components/DailyCheckinModal.vue';
 import { useStudyStore } from '../../stores/study';
 
 const store = useStudyStore();
-const actionLabels = ['客观题刷题', '主观背诵', '综合/泛读'];
+const actionLabels = ['刷题', '背诵', '学习输入'];
 const actionTypes: ActionType[] = ['objective', 'recite', 'comprehensive'];
+const reciteOptions: { value: 20 | 50 | 80 | 100; label: string }[] = [
+    { value: 20, label: '漏点' },
+    { value: 50, label: '词不达意' },
+    { value: 80, label: '踩准' },
+    { value: 100, label: '肌肉记忆' }
+];
+const tagPresets: Record<ActionType, string[]> = {
+    objective: ['概念混淆', '主体搞错', '时间限定错误'],
+    recite: ['关键词遗漏', '顺序混乱', '理解偏差'],
+    comprehensive: ['踩点不全', '时间超限', '思路卡顿']
+};
 const actionIndex = ref(0);
 const activeNodeId = ref('');
 const trapMemo = ref('');
 const reciteMastery = ref<20 | 50 | 80 | 100>(80);
-const objective = reactive({ totalCount: 10, wrongCount: 0 });
+const objective = reactive({ totalCount: 10, wrongCount: 2 });
 const comprehensive = reactive({ durationMinutes: 30, scorePoints: 80 });
 const showCheckinModal = ref(false);
 const savingCheckin = ref(false);
 
 const actionType = computed(() => actionTypes[actionIndex.value]);
 const activeNode = computed(() => store.nodes.find((node) => node.id === activeNodeId.value));
+const quickTags = computed(() => tagPresets[actionType.value]);
+const blockLabel = computed(() => {
+    if (actionType.value === 'objective') {
+        return '客观题量化';
+    }
+
+    if (actionType.value === 'recite') {
+        return '背诵掌握度';
+    }
+
+    return '学习输入量化';
+});
+
+const objectiveAccuracy = computed(() => {
+    const total = Number(objective.totalCount) || 0;
+    if (total <= 0) {
+        return 0;
+    }
+
+    const wrong = Math.min(Math.max(Number(objective.wrongCount) || 0, 0), total);
+    return Math.round(((total - wrong) / total) * 100);
+});
+
+const accuracyColor = computed(() => {
+    if (objectiveAccuracy.value >= 80) {
+        return '#0f766e';
+    }
+
+    if (objectiveAccuracy.value >= 60) {
+        return '#b45309';
+    }
+
+    return '#b91c1c';
+});
+
+const accuracyRingStyle = computed(() => ({
+    background: `conic-gradient(${accuracyColor.value} ${objectiveAccuracy.value * 3.6}deg, #e5e7eb 0deg)`
+}));
+
+const aiInsight = computed(() => {
+    const name = activeNode.value?.title ?? '该知识点';
+
+    if (actionType.value === 'objective') {
+        const acc = objectiveAccuracy.value;
+        if (acc >= 90) {
+            return `正确率 ${acc}%，掌握扎实，可拉长复习间隔。`;
+        }
+
+        if (acc >= 60) {
+            return `正确率 ${acc}%，错题需二次订正后再闭环。`;
+        }
+
+        return `错误率较高，建议重点复盘【${name}】。`;
+    }
+
+    if (actionType.value === 'recite') {
+        if (reciteMastery.value >= 100) {
+            return '已达肌肉记忆，进入长周期复习即可。';
+        }
+
+        if (reciteMastery.value >= 80) {
+            return '核心要点踩准，明日安排一次快速回忆。';
+        }
+
+        if (reciteMastery.value >= 50) {
+            return '仍有词不达意，建议结合关键词重背。';
+        }
+
+        return `漏点较多，建议重学【${name}】后再背诵。`;
+    }
+
+    const score = Number(comprehensive.scorePoints) || 0;
+    if (score >= 80) {
+        return '踩分较全，综合应用已成型。';
+    }
+
+    if (score >= 60) {
+        return '踩分中等，注意补齐遗漏要点。';
+    }
+
+    return `踩分偏低，建议重做【${name}】的综合题。`;
+});
+
 const canCheckin = computed(() => store.todayTasks.length === 0 && store.todayTotalCount > 0);
 const checkinButtonText = computed(() => {
     if (store.todayCheckin) {
@@ -163,17 +338,37 @@ function closeSheet() {
     trapMemo.value = '';
 }
 
-function onActionChange(event: { detail: { value: number } }) {
-    actionIndex.value = Number(event.detail.value);
+function setAction(index: number) {
+    actionIndex.value = index;
 }
 
-function onReciteChange(event: { detail: { value: number } }) {
-    reciteMastery.value = event.detail.value as 20 | 50 | 80 | 100;
+function normalizeObjective() {
+    const total = Math.max(Math.floor(Number(objective.totalCount) || 0), 0);
+    const wrong = Math.min(Math.max(Math.floor(Number(objective.wrongCount) || 0), 0), total);
+    objective.totalCount = total;
+    objective.wrongCount = wrong;
+}
+
+function appendTag(tag: string) {
+    if (trapMemo.value.includes(`#${tag}`)) {
+        return;
+    }
+
+    const prefix = trapMemo.value.trim();
+    trapMemo.value = prefix ? `${prefix} #${tag} ` : `#${tag} `;
 }
 
 function submitSettlement() {
     if (!activeNode.value) {
         return;
+    }
+
+    if (actionType.value === 'objective') {
+        normalizeObjective();
+        if (objective.totalCount <= 0) {
+            uni.showToast({ title: '请先填写总刷题数', icon: 'none' });
+            return;
+        }
     }
 
     const payload = actionType.value === 'objective'
@@ -445,46 +640,242 @@ async function saveCheckin(input: CreateDailyCheckinInput) {
 
 .sheet {
     width: 100%;
-    padding: 36rpx;
+    max-height: 86vh;
+    padding: 40rpx 36rpx 48rpx;
     border-radius: 36rpx 36rpx 0 0;
     background: #fff;
+    overflow-y: auto;
 }
 
-.sheet-title,
-.sheet-subtitle {
-    display: block;
+.sheet-head {
+    margin-bottom: 28rpx;
+}
+
+.sheet-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+}
+
+.sheet-icon {
+    font-size: 36rpx;
 }
 
 .sheet-title {
-    font-size: 36rpx;
+    font-size: 38rpx;
     font-weight: 800;
 }
 
 .sheet-subtitle {
-    margin: 8rpx 0 24rpx;
+    display: block;
+    margin-top: 8rpx;
     color: #6b7280;
+    font-size: 26rpx;
 }
 
-.picker,
-.memo-input,
-.form-row input {
-    margin-bottom: 20rpx;
-    padding: 22rpx;
-    border-radius: 20rpx;
+.segment {
+    display: flex;
+    padding: 6rpx;
+    border-radius: 999rpx;
     background: #f3f4f6;
 }
 
-.form-row {
+.segment-item {
+    flex: 1;
+    height: 72rpx;
+    line-height: 72rpx;
+    border-radius: 999rpx;
+    color: #6b7280;
+    font-size: 28rpx;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.segment-item.active {
+    background: #fff;
+    color: #0f766e;
+    font-weight: 700;
+    box-shadow: 0 6rpx 18rpx rgba(15, 118, 110, 0.12);
+}
+
+.block {
+    margin-top: 32rpx;
+}
+
+.block-label {
+    display: block;
+    margin-bottom: 16rpx;
+    color: #1f2933;
+    font-size: 26rpx;
+    font-weight: 700;
+}
+
+.metric-card {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    padding: 24rpx;
+    border-radius: 28rpx;
+    background: #f8fafc;
+}
+
+.metric-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16rpx 12rpx;
+    border-radius: 22rpx;
+    background: #fff;
+    box-shadow: inset 0 0 0 2rpx #e5e7eb;
+}
+
+.metric-name {
+    color: #6b7280;
+    font-size: 24rpx;
+}
+
+.metric-input {
+    width: 100%;
+    margin: 10rpx 0 6rpx;
+    color: #0f766e;
+    font-size: 52rpx;
+    font-weight: 800;
+    text-align: center;
+}
+
+.metric-input.danger {
+    color: #b91c1c;
+}
+
+.metric-hint {
+    color: #9ca3af;
+    font-size: 20rpx;
+}
+
+.accuracy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 168rpx;
+}
+
+.ring {
+    width: 132rpx;
+    height: 132rpx;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ring-hole {
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 50%;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ring-value {
+    font-size: 30rpx;
+    font-weight: 800;
+    color: #1f2933;
+}
+
+.accuracy-label {
+    margin-top: 12rpx;
+    color: #6b7280;
+    font-size: 24rpx;
+}
+
+.anchor-group {
     display: flex;
     gap: 16rpx;
 }
 
-.form-row input {
+.anchor {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20rpx 8rpx;
+    border-radius: 22rpx;
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 2rpx #e5e7eb;
+}
+
+.anchor.active {
+    background: #ecfdf5;
+    box-shadow: inset 0 0 0 4rpx #0f766e;
+}
+
+.anchor-value {
+    font-size: 32rpx;
+    font-weight: 800;
+    color: #1f2933;
+}
+
+.anchor.active .anchor-value {
+    color: #0f766e;
+}
+
+.anchor-label {
+    margin-top: 6rpx;
+    color: #6b7280;
+    font-size: 20rpx;
+}
+
+.memo-area {
+    width: 100%;
+    height: 150rpx;
+    box-sizing: border-box;
+    padding: 22rpx;
+    border-radius: 22rpx;
+    background: #f3f4f6;
+    font-size: 28rpx;
+}
+
+.tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16rpx;
+    margin-top: 18rpx;
+}
+
+.tag {
+    padding: 10rpx 22rpx;
+    border-radius: 999rpx;
+    background: #ecfdf5;
+    color: #0f766e;
+    font-size: 24rpx;
+}
+
+.insight {
+    display: flex;
+    align-items: flex-start;
+    gap: 12rpx;
+    margin-top: 32rpx;
+    padding: 24rpx;
+    border-radius: 22rpx;
+    background: #f0fdfa;
+}
+
+.insight-icon {
+    font-size: 28rpx;
+}
+
+.insight-text {
+    flex: 1;
+    color: #0f766e;
+    font-size: 24rpx;
+    line-height: 1.5;
 }
 
 .sheet .primary-button {
-    margin-top: 20rpx;
+    margin-top: 32rpx;
 }
 
 .sheet .text-button {
