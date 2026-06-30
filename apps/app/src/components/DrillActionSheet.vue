@@ -114,9 +114,11 @@ function startRecording() {
         seconds.value += 1;
     }, 1000);
 
-    // 真机/小程序尽量调用录音管理器；H5 无权限时静默降级，时长以计时器为准。
+    // 仅在小程序 / App 端调用原生录音管理器；H5 端不编译这段，
+    // 避免 uni.getRecorderManager 在 H5 触发「not supported」控制台报错。时长统一以计时器为准。
+    // #ifdef MP-WEIXIN || APP-PLUS
     try {
-        const manager = uni.getRecorderManager?.();
+        const manager = uni.getRecorderManager();
         if (manager) {
             recorder = manager as unknown as { start: () => void; stop: () => void };
             recorder.start();
@@ -124,6 +126,7 @@ function startRecording() {
     } catch (error) {
         recorder = null;
     }
+    // #endif
 }
 
 function stopAndSubmit() {

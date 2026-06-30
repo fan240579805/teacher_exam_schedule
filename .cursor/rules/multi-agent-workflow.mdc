@@ -11,6 +11,8 @@ alwaysApply: true
 - Keep progress and handoff state updated in `.agent/TODO.md`, `.agent/STATE.json`, and `.agent/CHANGELOG.md`.
 - When problems occur, record the issue, investigation result, fix, and verification outcome in `.agent/CHANGELOG.md` or `.agent/STATE.json` before moving on.
 - After fixing a problem, self-drive verification with the narrowest relevant test first, then broader checks when the change can affect shared behavior.
+- 验收阶段必须检查运行时控制台无报错：H5/小程序预览与 `playwright-verify` 运行期间，浏览器/开发者工具控制台不得出现 error 或未捕获异常（含 Vite 预打包导出缺失、`pageerror`、资源 404）。`playwright-verify` 已自动捕获 `console.error`/`pageerror` 并在收尾断言为零；任何控制台报错都视为验收不通过。
+- 新增或修改 workspace 包（`@teacher-exam/core`、`@teacher-exam/types`）的导出后，必须重启 `dev:h5`（或删除 `apps/app/node_modules/.vite` 缓存）再验收，否则 Vite 预打包缓存仍是旧版本，运行时会报 `does not provide an export named ...`。
 - Before any commit or push, run a code audit/review pass over all changes. Use the project code-reviewer skill or an equivalent review stance focused on correctness, security, performance, and missing tests.
 - Do not commit or push until the review pass is clean or the remaining risks are explicitly documented.
 - Commit messages should make progress or resolved problems clear. Prefer small commits that map to a meaningful phase, issue, or verified fix.

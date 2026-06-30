@@ -1,6 +1,6 @@
 {
     "project": "深教考通",
-    "phase": "P14-interview-drill-audio-ai-mock",
+    "phase": "P14.1-console-clean-rule-and-recorder-ifdef",
     "activeWork": "按用户效果图重设计首页「动作结算」弹窗（仅在 P10.1 基线上叠加，不回退任何既有首页改动）：picker→刷题/背诵/学习输入分段；刷题量化框加名称+说明+正确率圆环（conic-gradient 实时联动）；背诵四挡锚点卡片；避坑随笔+联动快捷标签；智能提示栏（阈值计算，无网络）；主按钮改『标记完成并闭环』并加刷题校验；prd_final.md 新增「六、v7.0」章节。已过类型检查/双端构建/H5 浏览器走查，用户验收通过并已提交（智能提示文案暂定保留中性版，未改回『AI 洞察』）。",
     "recentValidation": {
         "playwrightAssertions": "70/70 通过（在 P10 的 65 项基础上新增 5 项：首页打卡按钮 bottom<10px 贴底、月历网格 7 列对齐 28/35/42 格之一、有效格子全部显示日号、月份选择器渲染并显示 YYYY 年 M 月、周表头一~日 7 列）",
@@ -38,6 +38,6 @@
         "secondary": "pnpm test（10 条核心单测）、pnpm --filter @teacher-exam/app run type-check、pnpm build:h5、pnpm build:mp-weixin。",
         "legacy": "harness/html-preview 本地 HTML + mock 数据仍可用作零依赖快速预览。"
     },
-    "nextImmediateAction": "P14 前端 mock 面试演练链路已全部落地并通过 playwright 83/83 + 双端编译 + 14 单测，准备提交并 push。后续（有网有 key 环境）：drill_runs 迁移 + STT/LLM Edge Function + Realtime 订阅替换 analyzeDrillMock；补齐前轮遗留的 playwright 结算弹窗 picker→segment 断言。注意：本机环境此前缺 playwright 包，已 pnpm install + npx playwright install chromium 恢复。",
+    "nextImmediateAction": "P14.1 已修复 dev 的 analyzeDrillMock 预打包报错（清 .vite 重启 dev），并新增『验收必须检查控制台零报错』规范 + playwright 自动断言 + DrillActionSheet 录音改条件编译（H5 不编译，消除 uni.getRecorderManager 报错）。playwright 84/84、双端编译通过，准备提交 push。后续（有网有 key 环境）：drill_runs 迁移 + STT/LLM Edge Function + Realtime 订阅替换 analyzeDrillMock。",
     "updatedAt": "2026-06-29T20:55:00+08:00"
 }

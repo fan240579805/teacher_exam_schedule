@@ -77,7 +77,24 @@ function expect(label, cond, detail = '') {
         userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148'
     });
     const page = await context.newPage();
-    page.on('pageerror', (err) => console.log('⚠️ pageerror:', err.message));
+    // 收集运行时控制台报错与未捕获异常，验收收尾断言为零，
+    // 用于兜住 analyzeDrillMock 这类「Vite 预打包导出缺失 / 运行时异常」问题。
+    const consoleErrors = [];
+    page.on('pageerror', (err) => {
+        consoleErrors.push(`pageerror: ${err.message}`);
+        console.log('⚠️ pageerror:', err.message);
+    });
+    page.on('console', (msg) => {
+        if (msg.type() === 'error') {
+            const text = msg.text();
+            // 忽略与业务无关的网络偶发噪声（favicon 等），其余 error 一律计入。
+            if (/favicon/i.test(text)) {
+                return;
+            }
+            consoleErrors.push(`console.error: ${text}`);
+            console.log('⚠️ console.error:', text);
+        }
+    });
 
     try {
         // 清空 localStorage 保证读取最新 mock
@@ -467,6 +484,9 @@ function expect(label, cond, detail = '') {
         expect('tabBar 包含「我的」', tabItems.some((t) => t.includes('我的')));
 
         await page.screenshot({ path: path.join(SHOTS_DIR, '8-tabbar.png'), fullPage: false });
+
+        // ====== 7. 控制台零报错（全流程结束后统一断言）======
+        expect('全流程浏览器控制台无 error / 未捕获异常', consoleErrors.length === 0, consoleErrors.slice(0, 5).join(' | '));
 
         // ====== 总结 ======
         const passed = assertions.filter((a) => a.ok).length;

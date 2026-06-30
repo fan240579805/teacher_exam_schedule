@@ -209,3 +209,11 @@
 - [x] 验证：`pnpm test`(14)、`type-check`、`build:h5`、`build:mp-weixin`、`playwright-verify` **83/83**。
 - [x] 提交并 push。
 - [ ] 待办（有网有 key 环境）：实现 `drill_runs` 迁移 + STT/LLM Edge Function + Realtime 订阅，把 `analyzeDrillMock` 换成真实管线；补齐前轮遗留的 playwright 结算弹窗 picker→segment 断言。
+
+## P14.1 dev 控制台报错修复 + 验收查控制台规范
+
+- [x] 修复 dev `analyzeDrillMock` 预打包报错：清 `.vite` 缓存重启 `dev:h5`，浏览器复验首页正常。
+- [x] 新增规范（`.cursor/rules/multi-agent-workflow.mdc`）：验收阶段必须检查控制台零报错 + 重申新增 workspace 导出后须重启 dev。
+- [x] `playwright-verify.mjs` 新增 `console.error`/`pageerror` 收集与「全流程控制台零报错」断言。
+- [x] 修复 H5 `uni.getRecorderManager` 报错：`DrillActionSheet` 录音改 `// #ifdef MP-WEIXIN || APP-PLUS` 条件编译。
+- [x] 验证：`type-check`、`build:h5`、`build:mp-weixin`、`playwright-verify` **84/84**（含控制台零报错）。

@@ -1,5 +1,16 @@
 # Agent Changelog
 
+## 2026-06-30 — P14.1 修复 dev 控制台报错 + 新增「验收查控制台」规范
+
+- **现象**：dev 报 `SyntaxError: ... does not provide an export named 'analyzeDrillMock' (study.ts)`，首页白屏。
+- **根因**：P14 给 `@teacher-exam/core` 新增 `analyzeDrillMock` 导出，但 `dev:h5` 是更早启动的，Vite 预打包缓存（`apps/app/node_modules/.vite`）仍是旧版本（与 P12 `buildBookTree` 同类问题）。
+- **处理**：杀掉 5173 旧 dev → 删除 `.vite` 缓存 → 重启 `dev:h5`；浏览器复验首页正常渲染、报错消失。
+- **新增规范**（[.cursor/rules/multi-agent-workflow.mdc](.cursor/rules/multi-agent-workflow.mdc)）：① 验收阶段必须检查运行时控制台无 error / 未捕获异常；② 重申「新增/改 workspace 包导出后必须重启 dev 或清 `.vite`」。
+- **落地为自动断言**：`harness/playwright-verify.mjs` 新增 `console.error` / `pageerror` 收集，收尾断言为零（忽略 favicon 噪声）。
+- **由此抓出并修复**：H5 端 `uni.getRecorderManager` 不支持会打 `console.error`；`DrillActionSheet.vue` 录音调用改用 `// #ifdef MP-WEIXIN || APP-PLUS` 条件编译，H5 不编译该段（时长仍由计时器驱动），控制台恢复干净。
+- **验证**：`pnpm type-check`、`pnpm build:h5`、`pnpm build:mp-weixin`、`node harness/playwright-verify.mjs` **84/84**（含「全流程控制台零报错」）。
+
+
 ## 2026-06-29 (晚续) — P14 面试演练：音频 + AI 质检（前端 mock 落地）
 
 按用户两张 v8.0 截图需求落地。**范围已与用户确认**：前端 + mock AI（可过 playwright + 小程序编译）；真实 STT/LLM/Edge Functions 写进 PRD 并预留接口（架构选 Edge Functions + 异步轮询）。
